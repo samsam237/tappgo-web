@@ -82,3 +82,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Start Next.js server
 CMD ["node", "server.js"]
+
+# Stage 5: Production (alias for runner - for Dokploy compatibility)
+FROM runner AS production
