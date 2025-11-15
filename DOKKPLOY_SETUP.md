@@ -23,15 +23,18 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
 - Section "Build Settings" ou "Build Arguments"
 - Ajoutez les variables ci-dessus
 
-### 2. Variables Runtime (Optionnel)
+### 2. Variables Runtime (IMPORTANT pour le port)
 
-Ces variables peuvent être définies au runtime dans la section **"Environment Variables"** :
+Ces variables doivent être définies au runtime dans la section **"Environment Settings"** :
 
 ```
 PORT=5500
+HOST=0.0.0.0
 HOSTNAME=0.0.0.0
 NODE_ENV=production
 ```
+
+**Important** : `HOST=0.0.0.0` est nécessaire pour que Next.js écoute sur toutes les interfaces réseau (pas seulement localhost).
 
 ## 📋 Checklist de Configuration
 
@@ -50,6 +53,28 @@ Après le déploiement, vérifiez que les variables sont correctement intégrée
 3. **Tester l'API** : Vérifiez que les requêtes vont vers la bonne URL
 
 ## ❌ Erreurs Courantes
+
+### Erreur : "Bad Gateway" (502)
+
+**Causes possibles** :
+
+1. **Le serveur n'écoute pas sur 0.0.0.0** :
+   - Vérifiez que `HOST=0.0.0.0` est défini dans "Environment Settings"
+   - Sans cette variable, Next.js écoute seulement sur localhost et n'est pas accessible depuis l'extérieur
+
+2. **Mauvais mapping de port** :
+   - Vérifiez que le port dans Dokploy correspond au port 5500
+   - Le mapping doit être : `PORT_EXTERNE:5500` (ex: `80:5500` ou `443:5500`)
+
+3. **Le conteneur ne démarre pas** :
+   - Vérifiez les logs du conteneur dans Dokploy
+   - Vérifiez que le healthcheck passe (attendez 40 secondes après le démarrage)
+
+**Solution** :
+1. Ajoutez `HOST=0.0.0.0` dans "Environment Settings"
+2. Vérifiez que `PORT=5500` est défini
+3. Redémarrez le conteneur
+4. Vérifiez les logs pour voir sur quel port le serveur écoute
 
 ### Erreur : "Cannot connect to API"
 

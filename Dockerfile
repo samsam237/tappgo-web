@@ -77,7 +77,9 @@ EXPOSE 5500
 # Runtime environment variables
 # Note: NEXT_PUBLIC_* variables ne peuvent pas être changées au runtime
 # car elles sont intégrées dans le bundle JavaScript au build-time
+# Next.js standalone utilise PORT et HOST (pas HOSTNAME)
 ENV PORT=5500
+ENV HOST="0.0.0.0"
 ENV HOSTNAME="0.0.0.0"
 
 # Health check
