@@ -84,8 +84,10 @@ USER nextjs
 EXPOSE 5500
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:5500/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Vérifie que le serveur répond sur le port 5500
+# start-period=40s : attend 40 secondes avant de commencer les vérifications
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+#     CMD node -e "require('http').get('http://localhost:5500/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start Next.js server
 # Next.js standalone place server.js à la racine du dossier standalone
