@@ -8,9 +8,8 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '',
   },
 
-  // No rewrites needed - Nginx handles the routing
-  // Frontend calls /api/v1/* directly
-  // Nginx proxies to backend at 127.0.0.1:5550
+  // API routes in src/app/api/v1/[...path]/route.ts handle proxying
+  // In production, Nginx can also handle the routing
 
   images: {
     // Portable image domains configuration

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +18,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
   const apiClient = useApi();
 
@@ -27,7 +28,16 @@ export function LoginForm() {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    mode: 'onBlur',
   });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -47,6 +57,49 @@ export function LoginForm() {
       setIsLoading(false);
     }
   };
+
+  // Éviter les erreurs d'hydratation en ne rendant le formulaire qu'après le montage
+  if (!isMounted) {
+    return (
+      <div className="mt-8 space-y-6">
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="email" className="label">
+              Adresse email
+            </label>
+            <input
+              type="email"
+              autoComplete="email"
+              className="input"
+              placeholder="votre@email.com"
+              disabled
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="label">
+              Mot de passe
+            </label>
+            <input
+              type="password"
+              autoComplete="current-password"
+              className="input"
+              placeholder="••••••••"
+              disabled
+            />
+          </div>
+        </div>
+        <div>
+          <button
+            type="button"
+            disabled
+            className="btn-primary w-full py-3 text-base font-medium opacity-50"
+          >
+            Se connecter
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>

@@ -5,16 +5,30 @@ export class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
-    // Use relative URL for portable deployment across any domain/IP
-    // Nginx reverse proxy handles routing to the backend
+    // Configuration flexible pour différents scénarios de déploiement :
+    // 1. Domaines différents (VPS séparés) : NEXT_PUBLIC_API_URL=https://api.example.com
+    //    → Requêtes directes vers l'API (nécessite CORS configuré sur le backend)
+    // 2. Reverse proxy (même domaine) : NEXT_PUBLIC_API_URL vide ou non défini
+    //    → Utilise le proxy Next.js (/api/v1) qui route vers le backend
+    // 3. Développement local : NEXT_PUBLIC_API_URL=http://localhost:5550
+    //    → Utilise le proxy Next.js qui route vers localhost:5550
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+    // Si une URL absolue est fournie, l'utiliser directement
+    // Sinon, utiliser le proxy Next.js (routes dans src/app/api/v1/[...path]/route.ts)
+    const baseURL = API_BASE_URL 
+      ? `${API_BASE_URL}/api/v1` 
+      : '/api/v1';
+
     this.client = axios.create({
-      baseURL: API_BASE_URL ? `${API_BASE_URL}/api/v1` : '/api/v1',
+      baseURL,
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
       },
+      // Pour les requêtes cross-origin, axios gère automatiquement CORS
+      // Assurez-vous que le backend autorise votre domaine frontend dans les headers CORS
+      withCredentials: false, // Changez à true si vous utilisez des cookies cross-origin
     });
 
     this.setupInterceptors();

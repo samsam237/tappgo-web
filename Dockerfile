@@ -31,11 +31,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build arguments for build-time environment variables
+# IMPORTANT: Ces variables doivent être passées comme --build-arg lors du build
+# Dans Dokploy, configurez-les dans "Build Arguments" et non dans "Environment Variables"
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_APP_NAME=TappPlus
 ARG NEXT_PUBLIC_APP_VERSION=1.0.0
 
-# Set build-time env vars
+# Set build-time env vars (NEXT_PUBLIC_* sont intégrées dans le bundle au build-time)
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
 ENV NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION
@@ -73,6 +75,8 @@ USER nextjs
 EXPOSE 5500
 
 # Runtime environment variables
+# Note: NEXT_PUBLIC_* variables ne peuvent pas être changées au runtime
+# car elles sont intégrées dans le bundle JavaScript au build-time
 ENV PORT=5500
 ENV HOSTNAME="0.0.0.0"
 
