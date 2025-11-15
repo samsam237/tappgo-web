@@ -68,12 +68,6 @@ RUN mkdir .next && chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Switch to non-root user
-USER nextjs
-
-# Expose port
-EXPOSE 5500
-
 # Runtime environment variables
 # Note: NEXT_PUBLIC_* variables ne peuvent pas être changées au runtime
 # car elles sont intégrées dans le bundle JavaScript au build-time
@@ -81,12 +75,20 @@ EXPOSE 5500
 ENV PORT=5500
 ENV HOST="0.0.0.0"
 ENV HOSTNAME="0.0.0.0"
+ENV NODE_ENV=production
+
+# Switch to non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 5500
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:5500/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start Next.js server
+# Next.js standalone place server.js à la racine du dossier standalone
 CMD ["node", "server.js"]
 
 # Stage 5: Production (alias for runner - for Dokploy compatibility)
