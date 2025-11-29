@@ -12,13 +12,20 @@ export class ApiClient {
     //    → Utilise le proxy Next.js (/api/v1) qui route vers le backend
     // 3. Développement local : NEXT_PUBLIC_API_URL=http://localhost:5550
     //    → Utilise le proxy Next.js qui route vers localhost:5550
+    // 4. Forcer le proxy en développement : USE_PROXY_IN_DEV=true
+    //    → Force l'utilisation du proxy même si NEXT_PUBLIC_API_URL est défini
+    //    → Utile pour contourner les problèmes de certificat SSL en développement
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+    const USE_PROXY_IN_DEV = 
+      process.env.NODE_ENV === 'development' && 
+      process.env.USE_PROXY_IN_DEV === 'true';
 
-    // Si une URL absolue est fournie, l'utiliser directement
+    // Si USE_PROXY_IN_DEV est activé, forcer l'utilisation du proxy
+    // Sinon, si une URL absolue est fournie, l'utiliser directement
     // Sinon, utiliser le proxy Next.js (routes dans src/app/api/v1/[...path]/route.ts)
-    const baseURL = API_BASE_URL 
-      ? `${API_BASE_URL}/api/v1` 
-      : '/api/v1';
+    const baseURL = (USE_PROXY_IN_DEV || !API_BASE_URL)
+      ? '/api/v1'
+      : `${API_BASE_URL}/api/v1`;
 
     this.client = axios.create({
       baseURL,
@@ -55,6 +62,44 @@ export class ApiClient {
         return response;
       },
       (error) => {
+        // Détection des erreurs de certificat SSL/TLS
+        const isCertificateError = 
+          error.code === 'ERR_CERT_AUTHORITY_INVALID' ||
+          error.code === 'ERR_CERT_COMMON_NAME_INVALID' ||
+          error.code === 'ERR_CERT_DATE_INVALID' ||
+          error.code === 'ERR_CERT_INVALID' ||
+          error.message?.includes('certificate') ||
+          error.message?.includes('SSL') ||
+          error.message?.includes('TLS') ||
+          error.message?.includes('ERR_CERT');
+
+        if (isCertificateError) {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+          const isDevelopment = process.env.NODE_ENV === 'development';
+          
+          let errorMessage = 'Erreur de certificat SSL : Le certificat du serveur API n\'est pas valide.';
+          
+          if (isDevelopment && apiUrl) {
+            errorMessage += '\n\nSolution : Utilisez le proxy Next.js en supprimant NEXT_PUBLIC_API_URL de votre .env.local, ou corrigez le certificat SSL du serveur.';
+          } else if (apiUrl) {
+            errorMessage += '\n\nVeuillez contacter l\'administrateur pour corriger le certificat SSL du serveur.';
+          }
+          
+          console.error('Erreur de certificat SSL détectée:', {
+            code: error.code,
+            message: error.message,
+            url: error.config?.url,
+            baseURL: error.config?.baseURL,
+          });
+          
+          toast.error(errorMessage, {
+            duration: 8000,
+          });
+          
+          return Promise.reject(new Error('Erreur de certificat SSL. Veuillez vérifier la configuration du serveur.'));
+        }
+
+        // Gestion des autres erreurs
         if (error.response?.status === 401) {
           this.clearToken();
           window.location.href = '/auth/login';
@@ -64,7 +109,10 @@ export class ApiClient {
         } else if (error.response?.data?.message) {
           toast.error(error.response.data.message);
         } else if (error.message) {
-          toast.error(error.message);
+          // Ne pas afficher les messages d'erreur réseau génériques pour les erreurs de certificat
+          if (!isCertificateError) {
+            toast.error(error.message);
+          }
         }
         return Promise.reject(error);
       }
