@@ -6,6 +6,13 @@ import { NextRequest, NextResponse } from 'next/server';
 // et le client fera les requêtes directement (nécessite CORS configuré sur le backend).
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5550';
 
+// Solution 4 : Désactiver la vérification SSL en développement uniquement
+// ⚠️ ATTENTION : À utiliser UNIQUEMENT en développement, JAMAIS en production
+// Définissez DISABLE_SSL_VERIFICATION=true dans votre .env.local pour l'activer
+const DISABLE_SSL_VERIFICATION = 
+  process.env.NODE_ENV === 'development' && 
+  process.env.DISABLE_SSL_VERIFICATION === 'true';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { path: string[] } }
@@ -71,10 +78,36 @@ async function proxyRequest(
       }
     }
     
-    const response = await fetch(targetUrl, options);
-    const data = await response.json();
+    // Solution 4 : Désactiver la vérification SSL en développement uniquement
+    // ⚠️ ATTENTION : À utiliser UNIQUEMENT en développement, JAMAIS en production
+    // Pour les requêtes HTTPS avec SSL désactivé, on modifie temporairement NODE_TLS_REJECT_UNAUTHORIZED
+    let originalRejectUnauthorized: string | undefined;
+    if (DISABLE_SSL_VERIFICATION && targetUrl.startsWith('https://')) {
+      originalRejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    }
     
-    return NextResponse.json(data, { status: response.status });
+    try {
+      const response = await fetch(targetUrl, options);
+      const data = await response.json();
+      
+      // Restaurer la valeur originale après la requête
+      if (originalRejectUnauthorized !== undefined) {
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = originalRejectUnauthorized;
+      } else if (DISABLE_SSL_VERIFICATION && targetUrl.startsWith('https://')) {
+        delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+      }
+      
+      return NextResponse.json(data, { status: response.status });
+    } catch (fetchError: any) {
+      // Restaurer la valeur originale en cas d'erreur
+      if (originalRejectUnauthorized !== undefined) {
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = originalRejectUnauthorized;
+      } else if (DISABLE_SSL_VERIFICATION && targetUrl.startsWith('https://')) {
+        delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+      }
+      throw fetchError;
+    }
   } catch (error: any) {
     console.error('API Proxy Error:', error);
     return NextResponse.json(
