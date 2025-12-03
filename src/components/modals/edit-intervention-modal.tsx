@@ -112,10 +112,10 @@ export function EditInterventionModal({ isOpen, onClose, interventionId }: EditI
     <Modal isOpen={isOpen} onClose={onClose} size="lg" title="Modifier l'intervention">
       <form onSubmit={handleSubmit} className="space-y-6">
         <ModalContent>
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-5">
             {/* Titre */}
             <div>
-              <Label htmlFor="title">Titre de l'intervention *</Label>
+              <Label htmlFor="title" required>Titre de l'intervention</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -139,7 +139,7 @@ export function EditInterventionModal({ isOpen, onClose, interventionId }: EditI
 
             {/* Date et heure */}
             <div>
-              <Label htmlFor="scheduledAtUtc">Date et heure *</Label>
+              <Label htmlFor="scheduledAtUtc" required>Date et heure</Label>
               <DateTimePicker
                 id="scheduledAtUtc"
                 value={formData.scheduledAtUtc}

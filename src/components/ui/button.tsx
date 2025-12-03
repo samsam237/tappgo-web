@@ -1,4 +1,5 @@
 import React from 'react';
+import { clsx } from 'clsx';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'outline' | 'destructive' | 'secondary';
@@ -11,10 +12,9 @@ export function Button({
   size = 'md', 
   children, 
   className = '', 
+  disabled,
   ...props 
 }: ButtonProps) {
-  const baseClasses = 'btn';
-  
   const variantClasses = {
     default: 'btn-primary',
     outline: 'btn-outline',
@@ -28,10 +28,16 @@ export function Button({
     lg: 'btn-lg'
   };
   
-  const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`.trim();
+  const classes = clsx(
+    'btn',
+    variantClasses[variant],
+    sizeClasses[size],
+    disabled && 'opacity-60 cursor-not-allowed hover:scale-100',
+    className
+  );
   
   return (
-    <button className={classes} {...props}>
+    <button className={classes} disabled={disabled} {...props}>
       {children}
     </button>
   );

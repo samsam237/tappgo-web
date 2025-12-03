@@ -46,8 +46,7 @@ interface ApiIntervention {
   updatedAt: string;
   person?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    fullName: string;
     createdAt: string;
     updatedAt: string;
   };
@@ -79,7 +78,10 @@ const mapApiInterventionToIntervention = (apiIntervention: ApiIntervention): Int
     updatedAt: apiIntervention.updatedAt,
     person: apiIntervention.person ? {
       id: apiIntervention.person.id,
-      fullName: `${apiIntervention.person.firstName} ${apiIntervention.person.lastName}`,
+      fullName: (apiIntervention.person as any).fullName || 
+                ((apiIntervention.person as any).firstName && (apiIntervention.person as any).lastName 
+                  ? `${(apiIntervention.person as any).firstName} ${(apiIntervention.person as any).lastName}` 
+                  : 'Nom non renseigné'),
       createdAt: apiIntervention.person.createdAt,
       updatedAt: apiIntervention.person.updatedAt
     } : undefined,
@@ -115,7 +117,16 @@ export function InterventionsOverview() {
     () => apiClient.getInterventions(),
     {
       onSuccess: (data) => {
-        const mappedInterventions = data.map(mapApiInterventionToIntervention);
+        console.log('📥 Données interventions reçues de l\'API:', data);
+        // L'API retourne directement un tableau
+        const interventionsArray = Array.isArray(data) ? data : [];
+        console.log('📋 Tableau d\'interventions:', interventionsArray);
+        const mappedInterventions = interventionsArray.map((intervention: any) => {
+          console.log('🔄 Mapping intervention:', intervention);
+          console.log('👤 Données person dans intervention:', intervention.person);
+          return mapApiInterventionToIntervention(intervention);
+        });
+        console.log('✅ Interventions mappées:', mappedInterventions);
         setInterventions(mappedInterventions);
         setLoading(false);
       },

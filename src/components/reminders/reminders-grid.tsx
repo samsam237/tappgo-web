@@ -24,7 +24,7 @@ interface Reminder {
   description: string;
   scheduledAt: string;
   type: 'EMAIL' | 'SMS' | 'PUSH';
-  status: 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED';
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
   priority: 'LOW' | 'NORMAL' | 'HIGH';
   patientName: string;
   interventionTitle: string;
@@ -47,10 +47,10 @@ export function RemindersGrid({ reminders, onView, onEdit, onDelete }: Reminders
         return <Badge variant="outline">En attente</Badge>;
       case 'SENT':
         return <Badge variant="default">Envoyé</Badge>;
-      case 'DELIVERED':
-        return <Badge variant="default">Livré</Badge>;
       case 'FAILED':
         return <Badge variant="destructive">Échec</Badge>;
+      case 'CANCELLED':
+        return <Badge variant="secondary">Annulé</Badge>;
       default:
         return null;
     }
@@ -87,11 +87,11 @@ export function RemindersGrid({ reminders, onView, onEdit, onDelete }: Reminders
       case 'PENDING':
         return <ClockIcon className="h-4 w-4 text-yellow-500" />;
       case 'SENT':
-        return <BellIcon className="h-4 w-4 text-blue-500" />;
-      case 'DELIVERED':
         return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
       case 'FAILED':
         return <XCircleIcon className="h-4 w-4 text-red-500" />;
+      case 'CANCELLED':
+        return <XCircleIcon className="h-4 w-4 text-gray-500" />;
       default:
         return null;
     }
@@ -110,7 +110,7 @@ export function RemindersGrid({ reminders, onView, onEdit, onDelete }: Reminders
   const getCardBorderColor = (status: string, priority: string) => {
     if (status === 'FAILED') return 'border-red-200';
     if (priority === 'HIGH') return 'border-orange-200';
-    if (status === 'DELIVERED') return 'border-green-200';
+    if (status === 'SENT') return 'border-green-200';
     return 'border-gray-200';
   };
 

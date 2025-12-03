@@ -53,39 +53,50 @@ interface Patient {
 }
 
 // Interface pour mapper les données de l'API vers l'interface Patient
+// Selon le contrat d'API, l'API retourne des Person avec: id, fullName, birthdate, phone, email, address, createdAt, updatedAt
 interface ApiPerson {
   id: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
+  fullName: string;
+  birthdate?: string;
   phone?: string;
-  dateOfBirth?: string;
+  email?: string;
   address?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Champs optionnels qui pourraient être ajoutés plus tard
   medicalHistory?: string;
   lastVisit?: string;
   nextAppointment?: string;
   status?: string;
   bloodType?: string;
   allergies?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 // Fonction pour mapper les données de l'API vers l'interface Patient
 const mapApiPersonToPatient = (apiPerson: ApiPerson): Patient => {
+  // Calculer la dernière visite à partir des consultations/interventions si disponibles
+  // Pour l'instant, on utilise updatedAt comme approximation
+  const lastVisit = apiPerson.lastVisit || apiPerson.updatedAt || apiPerson.createdAt;
+  
   return {
     id: apiPerson.id,
-    fullName: `${apiPerson.firstName} ${apiPerson.lastName}`,
+    fullName: apiPerson.fullName || 'Nom non renseigné',
     email: apiPerson.email || '',
     phone: apiPerson.phone || '',
-    dateOfBirth: apiPerson.dateOfBirth || '',
+    dateOfBirth: apiPerson.birthdate || '', // Mapper birthdate vers dateOfBirth
     address: apiPerson.address || '',
-    medicalHistory: apiPerson.medicalHistory ? apiPerson.medicalHistory.split(',').map(h => h.trim()) : [],
-    lastVisit: apiPerson.lastVisit || '',
+    medicalHistory: apiPerson.medicalHistory ? 
+      (typeof apiPerson.medicalHistory === 'string' ? 
+        apiPerson.medicalHistory.split(',').map(h => h.trim()) : 
+        apiPerson.medicalHistory) : [],
+    lastVisit: lastVisit,
     nextAppointment: apiPerson.nextAppointment,
     status: (apiPerson.status as 'ACTIVE' | 'INACTIVE' | 'AT_RISK') || 'ACTIVE',
     bloodType: apiPerson.bloodType,
-    allergies: apiPerson.allergies ? apiPerson.allergies.split(',').map(a => a.trim()) : []
+    allergies: apiPerson.allergies ? 
+      (typeof apiPerson.allergies === 'string' ? 
+        apiPerson.allergies.split(',').map(a => a.trim()) : 
+        apiPerson.allergies) : []
   };
 };
 
@@ -112,7 +123,15 @@ export function PatientsOverview() {
     () => apiClient.getPeople({ limit: 100 }),
     {
       onSuccess: (data) => {
-        const mappedPatients = data.data.map(mapApiPersonToPatient);
+        console.log('📥 Données reçues de l\'API:', data);
+        // L'API retourne directement un tableau, pas un objet avec data
+        const peopleArray = Array.isArray(data) ? data : (data.data || []);
+        console.log('📋 Tableau de personnes:', peopleArray);
+        const mappedPatients = peopleArray.map((person: any) => {
+          console.log('🔄 Mapping personne:', person);
+          return mapApiPersonToPatient(person);
+        });
+        console.log('✅ Patients mappés:', mappedPatients);
         setPatients(mappedPatients);
         setLoading(false);
       },

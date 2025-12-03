@@ -52,18 +52,39 @@ export function PatientsGrid({ patients, onView, onEdit, onDelete }: PatientsGri
   };
 
   const calculateAge = (dateOfBirth: string) => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    if (!dateOfBirth || dateOfBirth.trim() === '') {
+      return 'N/A';
     }
-    return age;
+    try {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      if (isNaN(birthDate.getTime())) {
+        return 'N/A';
+      }
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR');
+    if (!dateString || dateString.trim() === '') {
+      return 'Non renseigné';
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Date invalide';
+      }
+      return date.toLocaleDateString('fr-FR');
+    } catch (error) {
+      return 'Date invalide';
+    }
   };
 
   if (patients.length === 0) {
@@ -80,74 +101,87 @@ export function PatientsGrid({ patients, onView, onEdit, onDelete }: PatientsGri
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {patients.map((patient) => (
-        <Card key={patient.id} className="hover:shadow-lg transition-shadow duration-200">
-          <CardContent className="p-6">
+        <Card key={patient.id} className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+          <CardContent className="p-6 overflow-hidden">
             {/* En-tête du patient */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center">
+            <div className="flex items-start justify-between mb-4 min-w-0">
+              <div className="flex items-center min-w-0 flex-1">
                 <div className="flex-shrink-0">
                   <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center">
                     <span className="text-primary-600 font-medium text-lg">
-                      {patient.fullName.split(' ').map(n => n[0]).join('')}
+                      {patient.fullName && patient.fullName.trim() 
+                        ? patient.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                        : '??'}
                     </span>
                   </div>
                 </div>
-                <div className="ml-3">
+                <div className="ml-3 min-w-0 flex-1">
                   <h3 className="text-lg font-medium text-gray-900 truncate">
-                    {patient.fullName}
+                    {patient.fullName || 'Nom non renseigné'}
                   </h3>
-                  <p className="text-sm text-gray-500">
-                    {calculateAge(patient.dateOfBirth)} ans
+                  <p className="text-sm text-gray-500 truncate">
+                    {(() => {
+                      const age = calculateAge(patient.dateOfBirth);
+                      return typeof age === 'number' ? `${age} ans` : age;
+                    })()}
                   </p>
                 </div>
               </div>
-              {getStatusBadge(patient.status)}
+              <div className="flex-shrink-0 ml-2">
+                {getStatusBadge(patient.status)}
+              </div>
             </div>
 
             {/* Informations de contact */}
             <div className="space-y-2 mb-4">
-              <div className="flex items-center text-sm text-gray-600">
-                <EnvelopeIcon className="flex-shrink-0 mr-2 h-4 w-4" />
-                <span className="truncate">{patient.email}</span>
-              </div>
-              <div className="flex items-center text-sm text-gray-600">
-                <PhoneIcon className="flex-shrink-0 mr-2 h-4 w-4" />
-                {patient.phone}
-              </div>
-              <div className="flex items-center text-sm text-gray-600">
-                <MapPinIcon className="flex-shrink-0 mr-2 h-4 w-4" />
-                <span className="truncate">{patient.address}</span>
-              </div>
+              {patient.email && (
+                <div className="flex items-center text-sm text-gray-600 min-w-0">
+                  <EnvelopeIcon className="flex-shrink-0 mr-2 h-4 w-4" />
+                  <span className="truncate min-w-0">{patient.email}</span>
+                </div>
+              )}
+              {patient.phone && (
+                <div className="flex items-center text-sm text-gray-600 min-w-0">
+                  <PhoneIcon className="flex-shrink-0 mr-2 h-4 w-4" />
+                  <span className="truncate min-w-0">{patient.phone}</span>
+                </div>
+              )}
+              {patient.address && (
+                <div className="flex items-center text-sm text-gray-600 min-w-0">
+                  <MapPinIcon className="flex-shrink-0 mr-2 h-4 w-4" />
+                  <span className="truncate min-w-0">{patient.address}</span>
+                </div>
+              )}
             </div>
 
             {/* Informations médicales */}
             <div className="space-y-2 mb-4">
               {patient.bloodType && (
-                <div className="flex items-center text-sm text-gray-600">
+                <div className="flex items-center text-sm text-gray-600 min-w-0">
                   <HeartIcon className="flex-shrink-0 mr-2 h-4 w-4" />
-                  Groupe sanguin: {patient.bloodType}
+                  <span className="truncate min-w-0">Groupe sanguin: {patient.bloodType}</span>
                 </div>
               )}
-              <div className="flex items-center text-sm text-gray-600">
+              <div className="flex items-center text-sm text-gray-600 min-w-0">
                 <CalendarIcon className="flex-shrink-0 mr-2 h-4 w-4" />
-                Dernière visite: {formatDate(patient.lastVisit)}
+                <span className="truncate min-w-0">Dernière visite: {formatDate(patient.lastVisit)}</span>
               </div>
               {patient.nextAppointment && (
-                <div className="flex items-center text-sm text-blue-600">
+                <div className="flex items-center text-sm text-blue-600 min-w-0">
                   <CalendarIcon className="flex-shrink-0 mr-2 h-4 w-4" />
-                  Prochain RDV: {formatDate(patient.nextAppointment)}
+                  <span className="truncate min-w-0">Prochain RDV: {formatDate(patient.nextAppointment)}</span>
                 </div>
               )}
             </div>
 
             {/* Antécédents médicaux */}
             {patient.medicalHistory.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Antécédents</h4>
+              <div className="mb-4 min-w-0">
+                <h4 className="text-sm font-medium text-gray-900 mb-2 truncate">Antécédents</h4>
                 <div className="flex flex-wrap gap-1">
                   {patient.medicalHistory.slice(0, 2).map((condition, index) => (
-                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      {condition}
+                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 max-w-full">
+                      <span className="truncate">{condition}</span>
                     </span>
                   ))}
                   {patient.medicalHistory.length > 2 && (
@@ -161,13 +195,13 @@ export function PatientsGrid({ patients, onView, onEdit, onDelete }: PatientsGri
 
             {/* Allergies */}
             {patient.allergies.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Allergies</h4>
+              <div className="mb-4 min-w-0">
+                <h4 className="text-sm font-medium text-gray-900 mb-2 truncate">Allergies</h4>
                 <div className="flex flex-wrap gap-1">
                   {patient.allergies.slice(0, 2).map((allergy, index) => (
-                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      <ExclamationTriangleIcon className="h-3 w-3 mr-1" />
-                      {allergy}
+                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 max-w-full">
+                      <ExclamationTriangleIcon className="h-3 w-3 mr-1 flex-shrink-0" />
+                      <span className="truncate">{allergy}</span>
                     </span>
                   ))}
                   {patient.allergies.length > 2 && (
@@ -180,29 +214,30 @@ export function PatientsGrid({ patients, onView, onEdit, onDelete }: PatientsGri
             )}
 
             {/* Actions */}
-            <div className="flex space-x-2 pt-4 border-t border-gray-200">
+            <div className="flex space-x-2 pt-4 border-t border-gray-200 min-w-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onView(patient)}
-                className="flex-1"
+                className="flex-1 min-w-0"
               >
-                <EyeIcon className="h-4 w-4 mr-1" />
-                Voir
+                <EyeIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+                <span className="truncate">Voir</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onEdit(patient)}
-                className="flex-1"
+                className="flex-1 min-w-0"
               >
-                <PencilIcon className="h-4 w-4 mr-1" />
-                Modifier
+                <PencilIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+                <span className="truncate">Modifier</span>
               </Button>
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => onDelete(patient)}
+                className="flex-shrink-0"
               >
                 <TrashIcon className="h-4 w-4" />
               </Button>

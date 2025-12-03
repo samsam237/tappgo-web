@@ -1,4 +1,5 @@
 import React from 'react';
+import { clsx } from 'clsx';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   className?: string;
@@ -10,12 +11,15 @@ export function Textarea({
   error = false, 
   ...props 
 }: TextareaProps) {
-  const baseClasses = 'input min-h-[80px] resize-y';
-  const errorClasses = error ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-500' : '';
+  const classes = clsx(
+    'input min-h-[100px] resize-y',
+    error && 'border-red-400 focus:border-red-500 focus:ring-red-500/20',
+    className
+  );
   
   return (
     <textarea
-      className={`${baseClasses} ${errorClasses} ${className}`}
+      className={classes}
       {...props}
     />
   );

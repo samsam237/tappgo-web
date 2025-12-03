@@ -130,18 +130,25 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      // Synchroniser aussi avec les cookies
+      document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
   }
 
   public setToken(token: string): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem('access_token', token);
+      // Synchroniser aussi avec les cookies pour la compatibilité avec requireAuth()
+      document.cookie = `access_token=${token}; path=/; max-age=900`; // 15 minutes
     }
   }
 
   public setRefreshToken(token: string): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem('refresh_token', token);
+      // Synchroniser aussi avec les cookies pour la compatibilité
+      document.cookie = `refresh_token=${token}; path=/; max-age=604800`; // 7 jours
     }
   }
 
@@ -171,10 +178,13 @@ export class ApiClient {
       refresh_token: refreshToken,
     });
 
-    const { access_token, user } = response.data;
+    const { access_token, refresh_token } = response.data;
     this.setToken(access_token);
+    if (refresh_token) {
+      this.setRefreshToken(refresh_token);
+    }
     
-    return { user, access_token };
+    return { access_token, refresh_token };
   }
 
   async getProfile() {
@@ -185,6 +195,11 @@ export class ApiClient {
   // Méthodes pour les interventions
   async getInterventions(params?: any) {
     const response = await this.client.get('/interventions', { params });
+    return response.data;
+  }
+
+  async getIntervention(id: string) {
+    const response = await this.client.get(`/interventions/${id}`);
     return response.data;
   }
 
@@ -236,9 +251,24 @@ export class ApiClient {
     return response.data;
   }
 
+  async attachPersonToOrganization(personId: string, organizationId: string, role: string) {
+    const response = await this.client.post(`/people/${personId}/organizations/${organizationId}`, { role });
+    return response.data;
+  }
+
+  async detachPersonFromOrganization(personId: string, organizationId: string) {
+    const response = await this.client.delete(`/people/${personId}/organizations/${organizationId}`);
+    return response.data;
+  }
+
   // Méthodes pour les consultations
   async getConsultations(params?: any) {
     const response = await this.client.get('/consultations', { params });
+    return response.data;
+  }
+
+  async getConsultation(id: string) {
+    const response = await this.client.get(`/consultations/${id}`);
     return response.data;
   }
 
@@ -313,6 +343,21 @@ export class ApiClient {
 
   async getOrganizationStats(id: string) {
     const response = await this.client.get(`/organizations/${id}/stats`);
+    return response.data;
+  }
+
+  async createOrganization(data: { name: string }) {
+    const response = await this.client.post('/organizations', data);
+    return response.data;
+  }
+
+  async updateOrganization(id: string, data: { name: string }) {
+    const response = await this.client.patch(`/organizations/${id}`, data);
+    return response.data;
+  }
+
+  async deleteOrganization(id: string) {
+    const response = await this.client.delete(`/organizations/${id}`);
     return response.data;
   }
 

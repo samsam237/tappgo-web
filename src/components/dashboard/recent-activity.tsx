@@ -28,8 +28,10 @@ export function RecentActivity() {
         return <CheckCircleIcon className="h-5 w-5 text-success-500" />;
       case 'FAILED':
         return <XCircleIcon className="h-5 w-5 text-danger-500" />;
-      case 'SCHEDULED':
+      case 'PENDING':
         return <ClockIcon className="h-5 w-5 text-warning-500" />;
+      case 'CANCELLED':
+        return <XCircleIcon className="h-5 w-5 text-gray-500" />;
       default:
         return <BellIcon className="h-5 w-5 text-gray-500" />;
     }
@@ -41,8 +43,10 @@ export function RecentActivity() {
         return 'text-success-600';
       case 'FAILED':
         return 'text-danger-600';
-      case 'SCHEDULED':
+      case 'PENDING':
         return 'text-warning-600';
+      case 'CANCELLED':
+        return 'text-gray-600';
       default:
         return 'text-gray-600';
     }
@@ -54,10 +58,10 @@ export function RecentActivity() {
         return 'Envoyé';
       case 'FAILED':
         return 'Échec';
-      case 'SCHEDULED':
-        return 'Programmé';
-      case 'SKIPPED':
-        return 'Ignoré';
+      case 'PENDING':
+        return 'En attente';
+      case 'CANCELLED':
+        return 'Annulé';
       default:
         return status;
     }

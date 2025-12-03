@@ -108,10 +108,10 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
     <Modal isOpen={isOpen} onClose={onClose} size="lg" title="Nouvelle intervention">
       <form onSubmit={handleSubmit} className="space-y-6">
         <ModalContent>
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-5">
             {/* Patient */}
             <div>
-              <Label htmlFor="patient">Patient *</Label>
+              <Label htmlFor="patient" required>Patient</Label>
               <Select
                 id="patient"
                 value={formData.personId}
@@ -130,7 +130,7 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
 
             {/* Titre */}
             <div>
-              <Label htmlFor="title">Titre de l'intervention *</Label>
+              <Label htmlFor="title" required>Titre de l'intervention</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -154,7 +154,7 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
 
             {/* Date et heure */}
             <div>
-              <Label htmlFor="scheduledAt">Date et heure *</Label>
+              <Label htmlFor="scheduledAt" required>Date et heure</Label>
               <DateTimePicker
                 id="scheduledAt"
                 value={formData.scheduledAt}

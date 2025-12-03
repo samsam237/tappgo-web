@@ -77,19 +77,48 @@ export function PatientDetailModal({ isOpen, onClose, patientId, onEdit, onDelet
 
   useEffect(() => {
     if (patientData) {
-      setPatient(patientData);
+      // Mapper les données de l'API vers l'interface Patient
+      // L'API retourne birthdate, pas dateOfBirth
+      const mappedPatient: Patient = {
+        id: patientData.id,
+        fullName: patientData.fullName || 'Nom non renseigné',
+        email: patientData.email || '',
+        phone: patientData.phone || '',
+        dateOfBirth: patientData.birthdate || '', // Mapper birthdate vers dateOfBirth
+        address: patientData.address || '',
+        medicalHistory: (patientData as any).medicalHistory || [],
+        lastVisit: (patientData as any).lastVisit || patientData.updatedAt || patientData.createdAt,
+        nextAppointment: (patientData as any).nextAppointment,
+        status: (patientData as any).status || 'ACTIVE',
+        bloodType: (patientData as any).bloodType,
+        allergies: (patientData as any).allergies || [],
+        gender: (patientData as any).gender,
+        emergencyContact: (patientData as any).emergencyContact,
+        insurance: (patientData as any).insurance,
+      };
+      setPatient(mappedPatient);
     }
   }, [patientData]);
 
   const calculateAge = (dateOfBirth: string) => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    if (!dateOfBirth || dateOfBirth.trim() === '') {
+      return 'N/A';
     }
-    return age;
+    try {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      if (isNaN(birthDate.getTime())) {
+        return 'N/A';
+      }
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -106,11 +135,22 @@ export function PatientDetailModal({ isOpen, onClose, patientId, onEdit, onDelet
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    if (!dateString || dateString.trim() === '') {
+      return 'Non renseigné';
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Date invalide';
+      }
+      return date.toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Date invalide';
+    }
   };
 
   if (isLoading) {
@@ -152,7 +192,12 @@ export function PatientDetailModal({ isOpen, onClose, patientId, onEdit, onDelet
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">{patient.fullName}</h2>
-                  <p className="text-gray-600">{calculateAge(patient.dateOfBirth)} ans • {patient.gender || 'Non spécifié'}</p>
+                  <p className="text-gray-600">
+                    {(() => {
+                      const age = calculateAge(patient.dateOfBirth);
+                      return typeof age === 'number' ? `${age} ans` : age;
+                    })()} • {patient.gender || 'Non spécifié'}
+                  </p>
                 </div>
                 {getStatusBadge(patient.status)}
               </div>
@@ -164,22 +209,30 @@ export function PatientDetailModal({ isOpen, onClose, patientId, onEdit, onDelet
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900">Informations de contact</h3>
               <div className="space-y-3">
-                <div className="flex items-center">
-                  <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3" />
-                  <span className="text-gray-900">{patient.email}</span>
-                </div>
-                <div className="flex items-center">
-                  <PhoneIcon className="h-5 w-5 text-gray-400 mr-3" />
-                  <span className="text-gray-900">{patient.phone}</span>
-                </div>
-                <div className="flex items-center">
-                  <MapPinIcon className="h-5 w-5 text-gray-400 mr-3" />
-                  <span className="text-gray-900">{patient.address}</span>
-                </div>
-                <div className="flex items-center">
-                  <CalendarIcon className="h-5 w-5 text-gray-400 mr-3" />
-                  <span className="text-gray-900">Né(e) le {formatDate(patient.dateOfBirth)}</span>
-                </div>
+                {patient.email && (
+                  <div className="flex items-center">
+                    <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <span className="text-gray-900">{patient.email}</span>
+                  </div>
+                )}
+                {patient.phone && (
+                  <div className="flex items-center">
+                    <PhoneIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <span className="text-gray-900">{patient.phone}</span>
+                  </div>
+                )}
+                {patient.address && (
+                  <div className="flex items-center">
+                    <MapPinIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <span className="text-gray-900">{patient.address}</span>
+                  </div>
+                )}
+                {patient.dateOfBirth && (
+                  <div className="flex items-center">
+                    <CalendarIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <span className="text-gray-900">Né(e) le {formatDate(patient.dateOfBirth)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -207,7 +260,7 @@ export function PatientDetailModal({ isOpen, onClose, patientId, onEdit, onDelet
           </div>
 
           {/* Antécédents médicaux */}
-          {patient.medicalHistory.length > 0 && (
+          {patient.medicalHistory && patient.medicalHistory.length > 0 && (
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-3">Antécédents médicaux</h3>
               <div className="flex flex-wrap gap-2">
@@ -221,7 +274,7 @@ export function PatientDetailModal({ isOpen, onClose, patientId, onEdit, onDelet
           )}
 
           {/* Allergies */}
-          {patient.allergies.length > 0 && (
+          {patient.allergies && patient.allergies.length > 0 && (
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-3">Allergies</h3>
               <div className="flex flex-wrap gap-2">

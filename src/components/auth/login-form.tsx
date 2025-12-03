@@ -62,7 +62,7 @@ export function LoginForm() {
   if (!isMounted) {
     return (
       <div className="mt-8 space-y-6">
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
             <label htmlFor="email" className="label">
               Adresse email
@@ -88,11 +88,11 @@ export function LoginForm() {
             />
           </div>
         </div>
-        <div>
+        <div className="pt-2">
           <button
             type="button"
             disabled
-            className="btn-primary w-full py-3 text-base font-medium opacity-50"
+            className="btn-primary w-full py-3.5 text-base font-semibold opacity-50"
           >
             Se connecter
           </button>
@@ -103,7 +103,7 @@ export function LoginForm() {
 
   return (
     <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
           <label htmlFor="email" className="label">
             Adresse email
@@ -116,7 +116,10 @@ export function LoginForm() {
             placeholder="votre@email.com"
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-danger-600">{errors.email.message}</p>
+            <p className="mt-2 text-sm text-red-600 font-medium flex items-center">
+              <span className="mr-1">⚠</span>
+              {errors.email.message}
+            </p>
           )}
         </div>
 
@@ -132,32 +135,40 @@ export function LoginForm() {
             placeholder="••••••••"
           />
           {errors.password && (
-            <p className="mt-1 text-sm text-danger-600">{errors.password.message}</p>
+            <p className="mt-2 text-sm text-red-600 font-medium flex items-center">
+              <span className="mr-1">⚠</span>
+              {errors.password.message}
+            </p>
           )}
         </div>
       </div>
 
-      <div>
+      <div className="pt-2">
         <button
           type="submit"
           disabled={isLoading}
-          className="btn-primary w-full py-3 text-base font-medium"
+          className="btn-primary w-full py-3.5 text-base font-semibold"
         >
           {isLoading ? (
             <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              Connexion...
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+              Connexion en cours...
             </div>
           ) : (
-            'Se connecter'
+            <span className="flex items-center justify-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Se connecter
+            </span>
           )}
         </button>
       </div>
 
-      {/* <div className="text-center">
+      {/* <div className="text-center pt-4 border-t border-gray-100">
         <p className="text-sm text-gray-600">
           Compte de démonstration :{' '}
-          <span className="font-medium text-primary-600">
+          <span className="font-medium text-blue-600">
             admin@meditache.com / admin123
           </span>
         </p>

@@ -41,7 +41,14 @@ export function CreatePatientModal({ isOpen, onClose }: CreatePatientModalProps)
         resetForm();
       },
       onError: (error: any) => {
-        toast.error(error.response?.data?.message || 'Erreur lors de la création du patient');
+        console.error('❌ Erreur complète:', error);
+        console.error('❌ Response data:', error.response?.data);
+        console.error('❌ Response status:', error.response?.status);
+        const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.error || 
+                           error.message || 
+                           'Erreur lors de la création du patient';
+        toast.error(errorMessage);
       },
     }
   );
@@ -64,23 +71,66 @@ export function CreatePatientModal({ isOpen, onClose }: CreatePatientModalProps)
       return;
     }
 
-    createPatientMutation.mutate({
+    // DEBUG: Afficher les données du formulaire avant nettoyage
+    console.log('📋 Données du formulaire AVANT nettoyage:', formData);
+    console.log('📅 birthdate valeur:', formData.birthdate);
+    console.log('📅 birthdate type:', typeof formData.birthdate);
+    console.log('📅 birthdate length:', formData.birthdate?.length);
+    console.log('📅 birthdate trimmed:', formData.birthdate?.trim());
+    console.log('📅 birthdate isEmpty:', !formData.birthdate || formData.birthdate.trim() === '');
+
+    // Nettoyer les données : ne pas envoyer les champs vides
+    const cleanedData: CreatePersonRequest = {
       fullName: formData.fullName,
-      birthdate: formData.birthdate,
-      phone: formData.phone,
-      email: formData.email,
-      address: formData.address,
-    });
+    };
+
+    // Ajouter birthdate seulement si elle n'est pas vide
+    // Le DatePicker retourne une date au format "YYYY-MM-DD"
+    // Prisma attend un format DateTime ISO 8601 complet, convertissons-le
+    if (formData.birthdate && formData.birthdate.trim() !== '') {
+      const dateValue = formData.birthdate.trim();
+      // Vérifier si c'est déjà un format DateTime complet
+      if (dateValue.includes('T') || dateValue.includes(' ')) {
+        // Déjà au format DateTime, on le garde tel quel
+        cleanedData.birthdate = dateValue;
+      } else if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Format date simple "YYYY-MM-DD", convertir en DateTime ISO 8601
+        // On utilise minuit UTC pour la date de naissance
+        cleanedData.birthdate = `${dateValue}T00:00:00.000Z`;
+        console.log('📅 birthdate converti de "YYYY-MM-DD" vers DateTime ISO:', cleanedData.birthdate);
+      } else {
+        // Format inattendu, on essaie quand même
+        cleanedData.birthdate = dateValue;
+        console.warn('⚠️ Format de date inattendu:', dateValue);
+      }
+    }
+
+    // Ajouter les autres champs optionnels seulement s'ils ne sont pas vides
+    if (formData.phone && formData.phone.trim() !== '') {
+      cleanedData.phone = formData.phone.trim();
+    }
+    if (formData.email && formData.email.trim() !== '') {
+      cleanedData.email = formData.email.trim();
+    }
+    if (formData.address && formData.address.trim() !== '') {
+      cleanedData.address = formData.address.trim();
+    }
+
+    // DEBUG: Afficher les données nettoyées qui seront envoyées
+    console.log('✅ Données NETTOYÉES qui seront envoyées à l\'API:', cleanedData);
+    console.log('📅 birthdate dans cleanedData:', cleanedData.birthdate);
+
+    createPatientMutation.mutate(cleanedData);
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg" title="Nouveau patient">
       <form onSubmit={handleSubmit} className="space-y-6">
         <ModalContent>
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-5">
             {/* Nom complet */}
             <div>
-              <Label htmlFor="fullName">Nom complet *</Label>
+              <Label htmlFor="fullName" required>Nom complet</Label>
               <Input
                 id="fullName"
                 value={formData.fullName}
@@ -96,9 +146,21 @@ export function CreatePatientModal({ isOpen, onClose }: CreatePatientModalProps)
               <DatePicker
                 id="birthdate"
                 value={formData.birthdate}
-                onChange={(value) => setFormData(prev => ({ ...prev, birthdate: value }))}
+                onChange={(value) => {
+                  console.log('📅 DatePicker onChange appelé avec:', value);
+                  setFormData(prev => ({ ...prev, birthdate: value }));
+                }}
                 max={new Date().toISOString().split('T')[0]}
               />
+              {/* DEBUG: Afficher la valeur actuelle */}
+              {formData.birthdate && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Valeur actuelle: <strong>{formData.birthdate}</strong> (type: {typeof formData.birthdate}, longueur: {formData.birthdate.length})
+                </p>
+              )}
+              {!formData.birthdate && (
+                <p className="mt-1 text-xs text-gray-400 italic">Aucune date sélectionnée</p>
+              )}
             </div>
 
             {/* Téléphone */}

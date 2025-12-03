@@ -17,6 +17,13 @@ export function clearAuthCookies() {
 export function getClientToken(): string | null {
   if (typeof window === 'undefined') return null;
   
+  // Vérifier d'abord localStorage (utilisé par api.ts)
+  const localStorageToken = localStorage.getItem('access_token');
+  if (localStorageToken) {
+    return localStorageToken;
+  }
+  
+  // Sinon, vérifier les cookies (pour compatibilité)
   const cookies = document.cookie.split(';');
   const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('access_token='));
   
@@ -28,5 +35,17 @@ export function getClientToken(): string | null {
 }
 
 export function isClientAuthenticated(): boolean {
-  return getClientToken() !== null;
+  if (typeof window === 'undefined') return false;
+  
+  // Vérifier localStorage d'abord (utilisé par api.ts)
+  const localStorageToken = localStorage.getItem('access_token');
+  if (localStorageToken) {
+    return true;
+  }
+  
+  // Sinon, vérifier les cookies
+  const cookies = document.cookie.split(';');
+  const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('access_token='));
+  
+  return tokenCookie !== undefined;
 }

@@ -100,19 +100,19 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
         fullName: patient.fullName || '',
         email: patient.email || '',
         phone: patient.phone || '',
-        dateOfBirth: patient.dateOfBirth || '',
+        dateOfBirth: patient.birthdate || '', // Mapper birthdate vers dateOfBirth pour le formulaire
         address: patient.address || '',
-        gender: patient.gender || '',
-        bloodType: patient.bloodType || '',
-        status: patient.status || 'ACTIVE',
-        medicalHistory: patient.medicalHistory || [],
-        allergies: patient.allergies || [],
-        emergencyContact: patient.emergencyContact || {
+        gender: (patient as any).gender || '',
+        bloodType: (patient as any).bloodType || '',
+        status: (patient as any).status || 'ACTIVE',
+        medicalHistory: (patient as any).medicalHistory || [],
+        allergies: (patient as any).allergies || [],
+        emergencyContact: (patient as any).emergencyContact || {
           name: '',
           phone: '',
           relationship: ''
         },
-        insurance: patient.insurance || {
+        insurance: (patient as any).insurance || {
           provider: '',
           policyNumber: ''
         }
@@ -128,7 +128,24 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
       return;
     }
 
-    updatePatientMutation.mutate(formData);
+    // Nettoyer les données : ne pas envoyer les champs vides et mapper dateOfBirth vers birthdate
+    const cleanedData: any = {
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+    };
+
+    // Ajouter birthdate seulement si elle n'est pas vide (mapper depuis dateOfBirth)
+    if (formData.dateOfBirth && formData.dateOfBirth.trim() !== '') {
+      cleanedData.birthdate = formData.dateOfBirth;
+    }
+
+    // Ajouter les autres champs optionnels seulement s'ils ne sont pas vides
+    if (formData.address && formData.address.trim() !== '') {
+      cleanedData.address = formData.address;
+    }
+
+    updatePatientMutation.mutate(cleanedData);
   };
 
   const addMedicalHistory = () => {
@@ -184,10 +201,10 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
           <div className="grid grid-cols-1 gap-6">
             {/* Informations personnelles */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Informations personnelles</h3>
+              <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2">Informations personnelles</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="fullName">Nom complet *</Label>
+                  <Label htmlFor="fullName" required>Nom complet</Label>
                   <Input
                     id="fullName"
                     value={formData.fullName}
@@ -197,7 +214,7 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email" required>Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -208,7 +225,7 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Téléphone *</Label>
+                  <Label htmlFor="phone" required>Téléphone</Label>
                   <Input
                     id="phone"
                     value={formData.phone}
@@ -287,7 +304,7 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
 
             {/* Antécédents médicaux */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Antécédents médicaux</h3>
+              <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2">Antécédents médicaux</h3>
               <div className="flex space-x-2">
                 <Input
                   value={medicalHistoryInput}
@@ -317,7 +334,7 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
 
             {/* Allergies */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Allergies</h3>
+              <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2">Allergies</h3>
               <div className="flex space-x-2">
                 <Input
                   value={allergiesInput}
@@ -347,7 +364,7 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
 
             {/* Contact d'urgence */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Contact d'urgence</h3>
+              <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2">Contact d'urgence</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="emergencyName">Nom</Label>
@@ -390,7 +407,7 @@ export function EditPatientModal({ isOpen, onClose, patientId }: EditPatientModa
 
             {/* Assurance */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Assurance</h3>
+              <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2">Assurance</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="insuranceProvider">Compagnie d'assurance</Label>

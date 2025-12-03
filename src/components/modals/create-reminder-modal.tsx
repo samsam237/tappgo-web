@@ -61,24 +61,76 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
   );
 
   // Récupérer la liste des interventions
-  const { data: interventions } = useQuery(
+  const { data: interventions, isLoading: isLoadingInterventions, error: interventionsError } = useQuery(
     'interventions',
     () => apiClient.getInterventions({ limit: 100 }),
     {
       enabled: isOpen,
+      onSuccess: (data) => {
+        console.log('📥 Données interventions reçues:', data);
+        console.log('📥 Type de données:', typeof data);
+        console.log('📥 Est un tableau?', Array.isArray(data));
+        if (!Array.isArray(data) && data?.data) {
+          console.log('📥 Données dans data.data:', data.data);
+        }
+      },
+      onError: (error) => {
+        console.error('❌ Erreur lors du chargement des interventions:', error);
+      },
     }
   );
 
   // Mutation pour créer le rappel
   const createReminderMutation = useMutation(
     (data: ReminderFormData) => {
-      return apiClient.createReminder({
-        interventionId: data.interventionId,
+      const recipient = data.type === 'EMAIL' ? data.recipient.email : data.recipient.phone;
+      
+      if (!recipient || recipient.trim() === '') {
+        throw new Error(`Le ${data.type === 'EMAIL' ? 'email' : 'téléphone'} du destinataire est obligatoire`);
+      }
+      
+      if (!data.description || data.description.trim() === '') {
+        throw new Error('Le message est obligatoire');
+      }
+      
+      if (!data.scheduledAt || data.scheduledAt.trim() === '') {
+        throw new Error('La date et heure programmées sont obligatoires');
+      }
+      
+      // Convertir le format datetime-local (YYYY-MM-DDTHH:mm) en format ISO 8601 complet
+      let scheduledAtFormatted = data.scheduledAt.trim();
+      // Le DateTimePicker retourne un format "YYYY-MM-DDTHH:mm" (sans secondes ni timezone)
+      // Le backend attend un format ISO 8601 complet avec timezone
+      if (scheduledAtFormatted.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        // Format datetime-local, ajouter les secondes et le timezone
+        // On utilise le timezone local du navigateur
+        const date = new Date(scheduledAtFormatted);
+        scheduledAtFormatted = date.toISOString();
+        console.log('📅 scheduledAt converti de "datetime-local" vers ISO 8601:', scheduledAtFormatted);
+      } else if (!scheduledAtFormatted.includes('T') || !scheduledAtFormatted.includes('Z') && !scheduledAtFormatted.match(/[+-]\d{2}:\d{2}$/)) {
+        // Si ce n'est pas déjà au format ISO 8601 complet, essayer de le convertir
+        const date = new Date(scheduledAtFormatted);
+        if (!isNaN(date.getTime())) {
+          scheduledAtFormatted = date.toISOString();
+        }
+      }
+      
+      if (!data.interventionId || data.interventionId.trim() === '') {
+        throw new Error('L\'intervention est obligatoire');
+      }
+      
+      const reminderData: any = {
+        interventionId: data.interventionId.trim(),
         type: data.type,
-        scheduledAt: data.scheduledAt,
-        message: data.description,
-        recipient: data.type === 'EMAIL' ? data.recipient.email : data.recipient.phone,
-      });
+        scheduledAt: scheduledAtFormatted,
+        message: data.description.trim(),
+        recipient: recipient.trim(),
+      };
+      
+      // DEBUG: Afficher les données qui seront envoyées
+      console.log('📤 Données du rappel à envoyer:', reminderData);
+      
+      return apiClient.createReminder(reminderData);
     },
     {
       onSuccess: () => {
@@ -102,7 +154,14 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
         });
       },
       onError: (error: any) => {
-        toast.error(error.response?.data?.message || 'Erreur lors de la création du rappel');
+        console.error('❌ Erreur lors de la création du rappel:', error);
+        console.error('❌ Response data:', error.response?.data);
+        console.error('❌ Response status:', error.response?.status);
+        const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.error || 
+                           error.message || 
+                           'Erreur lors de la création du rappel';
+        toast.error(errorMessage);
       },
     }
   );
@@ -110,23 +169,60 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.scheduledAt || !formData.patientId) {
-      toast.error('Veuillez remplir tous les champs obligatoires');
+    // Validation des champs obligatoires
+    if (!formData.title || formData.title.trim() === '') {
+      toast.error('Le titre du rappel est obligatoire');
+      return;
+    }
+    
+    if (!formData.scheduledAt || formData.scheduledAt.trim() === '') {
+      toast.error('La date et heure programmées sont obligatoires');
+      return;
+    }
+    
+    if (!formData.description || formData.description.trim() === '') {
+      toast.error('Le message est obligatoire');
+      return;
+    }
+    
+    const recipient = formData.type === 'EMAIL' ? formData.recipient.email : formData.recipient.phone;
+    if (!recipient || recipient.trim() === '') {
+      toast.error(`Le ${formData.type === 'EMAIL' ? 'email' : 'téléphone'} du destinataire est obligatoire`);
+      return;
+    }
+    
+    if (!formData.interventionId || formData.interventionId.trim() === '') {
+      toast.error('L\'intervention est obligatoire');
       return;
     }
 
     createReminderMutation.mutate(formData);
   };
 
-  const patientOptions = patients?.data?.map((patient: any) => ({
+  // Gérer les deux formats possibles : tableau direct ou objet avec propriété data
+  const patientsArray = Array.isArray(patients) 
+    ? patients 
+    : (patients?.data || []);
+  
+  const patientOptions = patientsArray.map((patient: any) => ({
     value: patient.id,
     label: patient.fullName,
-  })) || [];
+  }));
 
-  const interventionOptions = interventions?.data?.map((intervention: any) => ({
+  // Gérer les deux formats possibles : tableau direct ou objet avec propriété data
+  const interventionsArray = Array.isArray(interventions) 
+    ? interventions 
+    : (interventions?.data || []);
+  
+  console.log('📋 Interventions array pour options:', interventionsArray);
+  console.log('📋 Nombre d\'interventions:', interventionsArray.length);
+  
+  const interventionOptions = interventionsArray.map((intervention: any) => ({
     value: intervention.id,
-    label: intervention.title,
-  })) || [];
+    label: intervention.title || `Intervention ${intervention.id}`,
+  }));
+  
+  console.log('📋 Options d\'interventions générées:', interventionOptions);
 
   const getTemplatePlaceholder = (type: string) => {
     switch (type) {
@@ -145,10 +241,10 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
     <Modal isOpen={isOpen} onClose={onClose} size="lg" title="Créer un nouveau rappel">
       <form onSubmit={handleSubmit} className="space-y-6">
         <ModalContent>
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-5">
             {/* Titre */}
             <div>
-              <Label htmlFor="title">Titre du rappel *</Label>
+              <Label htmlFor="title" required>Titre du rappel</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -160,19 +256,20 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
 
             {/* Description */}
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" required>Message</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Description du rappel..."
+                placeholder="Message du rappel..."
                 rows={3}
+                required
               />
             </div>
 
             {/* Date et heure */}
             <div>
-              <Label htmlFor="scheduledAt">Date et heure programmées *</Label>
+              <Label htmlFor="scheduledAt" required>Date et heure programmées</Label>
               <DateTimePicker
                 id="scheduledAt"
                 value={formData.scheduledAt}
@@ -184,7 +281,7 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
             {/* Type et priorité */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="type">Type de rappel *</Label>
+                <Label htmlFor="type" required>Type de rappel</Label>
                 <Select
                   id="type"
                   value={formData.type}
@@ -214,7 +311,7 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
             {/* Patient et intervention */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="patientId">Patient *</Label>
+                <Label htmlFor="patientId" required>Patient</Label>
                 <Select
                   id="patientId"
                   value={formData.patientId}
@@ -223,20 +320,37 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
                 />
               </div>
               <div>
-                <Label htmlFor="interventionId">Intervention</Label>
-                <Select
-                  id="interventionId"
-                  value={formData.interventionId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, interventionId: value }))}
-                  options={interventionOptions}
-                />
+                <Label htmlFor="interventionId" required>Intervention</Label>
+                {isLoadingInterventions ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <LoadingSpinner size="sm" />
+                    <span>Chargement des interventions...</span>
+                  </div>
+                ) : interventionsError ? (
+                  <div className="text-sm text-red-500">
+                    Erreur lors du chargement des interventions. Veuillez réessayer.
+                  </div>
+                ) : interventionOptions.length === 0 ? (
+                  <div className="text-sm text-yellow-600">
+                    Aucune intervention disponible. Veuillez créer une intervention d'abord.
+                  </div>
+                ) : (
+                  <Select
+                    id="interventionId"
+                    value={formData.interventionId}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, interventionId: value }))}
+                    options={interventionOptions}
+                  />
+                )}
               </div>
             </div>
 
             {/* Informations de contact */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="email">Email du destinataire</Label>
+                <Label htmlFor="email" required={formData.type === 'EMAIL'}>
+                  Email du destinataire {formData.type === 'EMAIL' && '(requis)'}
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -246,10 +360,13 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
                     recipient: { ...prev.recipient, email: e.target.value }
                   }))}
                   placeholder="email@example.com"
+                  required={formData.type === 'EMAIL'}
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Téléphone du destinataire</Label>
+                <Label htmlFor="phone" required={formData.type === 'SMS'}>
+                  Téléphone du destinataire {(formData.type === 'SMS' || formData.type === 'PUSH') && '(requis)'}
+                </Label>
                 <Input
                   id="phone"
                   value={formData.recipient.phone}
@@ -258,6 +375,7 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
                     recipient: { ...prev.recipient, phone: e.target.value }
                   }))}
                   placeholder="+237 6 12 34 56 78"
+                  required={formData.type === 'SMS' || formData.type === 'PUSH'}
                 />
               </div>
             </div>

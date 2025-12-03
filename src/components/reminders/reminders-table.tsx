@@ -26,7 +26,7 @@ interface Reminder {
   description: string;
   scheduledAt: string;
   type: 'EMAIL' | 'SMS' | 'PUSH';
-  status: 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED';
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
   priority: 'LOW' | 'NORMAL' | 'HIGH';
   patientName: string;
   interventionTitle: string;
@@ -79,10 +79,10 @@ export function RemindersTable({
         return <Badge variant="outline">En attente</Badge>;
       case 'SENT':
         return <Badge variant="default">Envoyé</Badge>;
-      case 'DELIVERED':
-        return <Badge variant="default">Livré</Badge>;
       case 'FAILED':
         return <Badge variant="destructive">Échec</Badge>;
+      case 'CANCELLED':
+        return <Badge variant="secondary">Annulé</Badge>;
       default:
         return null;
     }

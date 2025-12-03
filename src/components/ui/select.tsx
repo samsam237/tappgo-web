@@ -66,20 +66,22 @@ export function Select({
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDownIcon 
-          className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+          className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-strong max-h-60 overflow-auto animate-fade-in-up">
           {options.map((option) => (
             <button
               key={option.value}
               type="button"
               disabled={option.disabled}
               onClick={() => !option.disabled && handleSelect(option.value)}
-              className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                selectedValue === option.value ? 'bg-primary-50 text-primary-900' : 'text-gray-900'
+              className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                selectedValue === option.value 
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-l-4 border-blue-500' 
+                  : 'text-gray-900 hover:bg-gray-50'
               }`}
             >
               {option.label}
@@ -108,7 +110,7 @@ export function SelectValue({ placeholder }: { placeholder?: string }) {
 
 export function SelectContent({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto ${className}`}>
+    <div className={`absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-strong max-h-60 overflow-auto animate-fade-in-up ${className}`}>
       {children}
     </div>
   );
@@ -129,7 +131,7 @@ export function SelectItem({
     <button
       type="button"
       onClick={() => onSelect?.(value)}
-      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none text-gray-900 ${className}`}
+      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors hover:bg-gray-50 focus:bg-gray-50 focus:outline-none text-gray-900 ${className}`}
     >
       {children}
     </button>

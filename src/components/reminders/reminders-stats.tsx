@@ -21,7 +21,7 @@ interface Reminder {
   description: string;
   scheduledAt: string;
   type: 'EMAIL' | 'SMS' | 'PUSH';
-  status: 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED';
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
   priority: 'LOW' | 'NORMAL' | 'HIGH';
   patientName: string;
   interventionTitle: string;
@@ -54,11 +54,11 @@ export function RemindersStats({ reminders }: RemindersStatsProps) {
 
     // Calculer les statistiques de base
     const totalReminders = reminders.length;
-    const sentReminders = reminders.filter(r => r.status === 'SENT' || r.status === 'DELIVERED').length;
+    const sentReminders = reminders.filter(r => r.status === 'SENT').length;
     const pendingReminders = reminders.filter(r => r.status === 'PENDING').length;
     const failedReminders = reminders.filter(r => r.status === 'FAILED').length;
-    const deliveredReminders = reminders.filter(r => r.status === 'DELIVERED').length;
-    const successRate = sentReminders > 0 ? Math.round((deliveredReminders / sentReminders) * 100) : 0;
+    const cancelledReminders = reminders.filter(r => r.status === 'CANCELLED').length;
+    const successRate = totalReminders > 0 ? Math.round((sentReminders / totalReminders) * 100) : 0;
 
     // Distribution par type
     const typeCounts: { [key: string]: number } = {};
@@ -81,7 +81,8 @@ export function RemindersStats({ reminders }: RemindersStatsProps) {
       .map(status => ({ 
         status: status === 'PENDING' ? 'En attente' : 
                 status === 'SENT' ? 'Envoyé' : 
-                status === 'DELIVERED' ? 'Livré' : 'Échec', 
+                status === 'FAILED' ? 'Échec' :
+                status === 'CANCELLED' ? 'Annulé' : status, 
         count: statusCounts[status] 
       }))
       .sort((a, b) => b.count - a.count);
@@ -115,14 +116,14 @@ export function RemindersStats({ reminders }: RemindersStatsProps) {
                reminderDate.getFullYear() === monthDate.getFullYear();
       });
       
-      const sent = monthReminders.filter(r => r.status === 'SENT' || r.status === 'DELIVERED').length;
-      const delivered = monthReminders.filter(r => r.status === 'DELIVERED').length;
+      const sent = monthReminders.filter(r => r.status === 'SENT').length;
+      const cancelled = monthReminders.filter(r => r.status === 'CANCELLED').length;
       const failed = monthReminders.filter(r => r.status === 'FAILED').length;
       
       monthlyStats.push({
         month: monthName,
-        sent: sent || 0, // Pas de données simulées, afficher 0
-        delivered: delivered || 0,
+        sent: sent || 0,
+        delivered: 0, // Statut DELIVERED n'existe pas pour les Reminders selon le contrat
         failed: failed || 0
       });
     }
@@ -149,7 +150,7 @@ export function RemindersStats({ reminders }: RemindersStatsProps) {
       sentReminders,
       pendingReminders,
       failedReminders,
-      deliveredReminders,
+      deliveredReminders: 0, // Statut DELIVERED n'existe pas pour les Reminders
       successRate,
       typeDistribution,
       statusDistribution,
@@ -180,9 +181,9 @@ export function RemindersStats({ reminders }: RemindersStatsProps) {
   const recentTotal = recentReminders.length;
   const previousTotal = previousReminders.length;
   const recentSuccessRate = recentReminders.length > 0 ? 
-    Math.round((recentReminders.filter(r => r.status === 'DELIVERED').length / recentReminders.length) * 100) : 0;
+    Math.round((recentReminders.filter(r => r.status === 'SENT').length / recentReminders.length) * 100) : 0;
   const previousSuccessRate = previousReminders.length > 0 ? 
-    Math.round((previousReminders.filter(r => r.status === 'DELIVERED').length / previousReminders.length) * 100) : 0;
+    Math.round((previousReminders.filter(r => r.status === 'SENT').length / previousReminders.length) * 100) : 0;
   const recentPending = recentReminders.filter(r => r.status === 'PENDING').length;
   const previousPending = previousReminders.filter(r => r.status === 'PENDING').length;
   const recentFailed = recentReminders.filter(r => r.status === 'FAILED').length;

@@ -49,8 +49,8 @@ export function DatePicker({
           max={max}
           className="input w-full pr-10"
         />
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <CalendarIcon className="h-4 w-4 text-gray-400" />
+        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+          <CalendarIcon className="h-5 w-5 text-gray-400" />
         </div>
       </div>
     </div>
@@ -95,8 +95,8 @@ export function DateTimePicker({
           max={max}
           className="input w-full pr-10"
         />
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <CalendarIcon className="h-4 w-4 text-gray-400" />
+        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+          <CalendarIcon className="h-5 w-5 text-gray-400" />
         </div>
       </div>
     </div>

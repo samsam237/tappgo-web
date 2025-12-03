@@ -93,10 +93,13 @@ export interface ReminderRule {
 export interface Reminder {
   id: string;
   interventionId: string;
+  type?: 'EMAIL' | 'SMS' | 'PUSH';
   plannedSendUtc: string;
-  status: 'SCHEDULED' | 'SENT' | 'SKIPPED' | 'FAILED';
+  message?: string;
+  recipient?: string;
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
   lastError?: string;
-  idempotencyKey: string;
+  idempotencyKey?: string;
   sentAt?: string;
   createdAt: string;
   updatedAt: string;

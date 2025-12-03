@@ -43,9 +43,20 @@ export function InterventionDetailModal({
   // Récupérer les détails de l'intervention
   const { data: intervention, isLoading } = useQuery(
     ['intervention', interventionId],
-    () => apiClient.getInterventions({ id: interventionId }),
+    () => {
+      if (!interventionId) throw new Error('Intervention ID requis');
+      return apiClient.getIntervention(interventionId);
+    },
     {
       enabled: isOpen && !!interventionId,
+      onError: (error: any) => {
+        console.error('❌ Erreur lors de la récupération de l\'intervention:', error);
+        console.error('📋 Intervention ID:', interventionId);
+      },
+      onSuccess: (data: any) => {
+        console.log('✅ Intervention récupérée:', data);
+        console.log('📅 scheduledAtUtc:', data?.scheduledAtUtc);
+      }
     }
   );
 
@@ -90,14 +101,46 @@ export function InterventionDetailModal({
     switch (status) {
       case 'SENT':
         return <Badge variant="default" className="bg-green-500 hover:bg-green-500">Envoyé</Badge>;
-      case 'SCHEDULED':
-        return <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-500">Programmé</Badge>;
+      case 'PENDING':
+        return <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-500">En attente</Badge>;
       case 'FAILED':
         return <Badge variant="destructive">Échec</Badge>;
-      case 'SKIPPED':
-        return <Badge variant="secondary">Ignoré</Badge>;
+      case 'CANCELLED':
+        return <Badge variant="secondary">Annulé</Badge>;
       default:
         return <Badge variant="secondary">Inconnu</Badge>;
+    }
+  };
+
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString || dateString.trim() === '') {
+      return 'Date non renseignée';
+    }
+    try {
+      const date = parseISO(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Date invalide';
+      }
+      return format(date, 'EEEE dd MMMM yyyy à HH:mm', { locale: fr });
+    } catch (error) {
+      console.error('Erreur de formatage de date:', error, dateString);
+      return 'Date invalide';
+    }
+  };
+
+  const formatDateShort = (dateString: string | undefined | null) => {
+    if (!dateString || dateString.trim() === '') {
+      return 'Date non renseignée';
+    }
+    try {
+      const date = parseISO(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Date invalide';
+      }
+      return format(date, 'dd/MM/yyyy à HH:mm', { locale: fr });
+    } catch (error) {
+      console.error('Erreur de formatage de date:', error, dateString);
+      return 'Date invalide';
     }
   };
 
@@ -140,6 +183,11 @@ export function InterventionDetailModal({
     );
   }
 
+  // DEBUG: Afficher la structure de l'intervention
+  console.log('📋 Intervention dans le modal:', intervention);
+  console.log('📅 scheduledAtUtc valeur:', intervention.scheduledAtUtc);
+  console.log('📅 scheduledAtUtc type:', typeof intervention.scheduledAtUtc);
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalHeader>
@@ -172,7 +220,7 @@ export function InterventionDetailModal({
                 <h4 className="text-sm font-medium text-gray-900 mb-2">Date et heure</h4>
                 <div className="flex items-center text-sm text-gray-600">
                   <CalendarIcon className="h-4 w-4 mr-2" />
-                  {format(parseISO(intervention.scheduledAtUtc), 'EEEE dd MMMM yyyy à HH:mm', { locale: fr })}
+                  {formatDate(intervention.scheduledAtUtc)}
                 </div>
               </div>
 
@@ -230,10 +278,10 @@ export function InterventionDetailModal({
                     <div className="flex items-center space-x-3">
                       <div className="text-sm">
                         <div className="font-medium text-gray-900">
-                          {format(parseISO(reminder.plannedSendUtc), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                          {formatDateShort(reminder.plannedSendUtc)}
                         </div>
                         <div className="text-gray-500">
-                          Canal: {reminder.channel}
+                          Canal: {reminder.type || reminder.channel || 'N/A'}
                         </div>
                       </div>
                     </div>

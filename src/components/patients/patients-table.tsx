@@ -84,18 +84,39 @@ export function PatientsTable({
   };
 
   const calculateAge = (dateOfBirth: string) => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    if (!dateOfBirth || dateOfBirth.trim() === '') {
+      return 'N/A';
     }
-    return age;
+    try {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      if (isNaN(birthDate.getTime())) {
+        return 'N/A';
+      }
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR');
+    if (!dateString || dateString.trim() === '') {
+      return 'Non renseigné';
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Date invalide';
+      }
+      return date.toLocaleDateString('fr-FR');
+    } catch (error) {
+      return 'Date invalide';
+    }
   };
 
   const SortButton = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
@@ -167,7 +188,10 @@ export function PatientsTable({
                           {patient.fullName}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {calculateAge(patient.dateOfBirth)} ans
+                          {(() => {
+                            const age = calculateAge(patient.dateOfBirth);
+                            return typeof age === 'number' ? `${age} ans` : age;
+                          })()}
                         </div>
                       </div>
                     </div>

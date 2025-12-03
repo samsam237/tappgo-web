@@ -195,7 +195,7 @@ export function PatientsExport({ patients }: PatientsExportProps) {
         // Calculer les statistiques basées sur les données réelles
         const totalInterventions = interventions.length;
         const totalReminders = reminders.length;
-        const successfulReminders = reminders.filter((r: any) => r.status === 'SENT' || r.status === 'DELIVERED').length;
+        const successfulReminders = reminders.filter((r: any) => r.status === 'SENT').length;
         const successRate = totalReminders > 0 ? Math.round((successfulReminders / totalReminders) * 100) : 0;
         
         return {
@@ -342,7 +342,7 @@ export function PatientsExport({ patients }: PatientsExportProps) {
                 <span className="text-gray-600">Taux de réussite:</span>
                 <span className="ml-1 font-medium">
                   {remindersData?.length > 0 ? 
-                    Math.round((remindersData.filter((r: any) => r.status === 'SENT' || r.status === 'DELIVERED').length / remindersData.length) * 100) : 0}%
+                    Math.round((remindersData.filter((r: any) => r.status === 'SENT').length / remindersData.length) * 100) : 0}%
                 </span>
               </div>
             </div>

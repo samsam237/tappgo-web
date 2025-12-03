@@ -30,7 +30,7 @@ interface Reminder {
   description: string;
   scheduledAt: string;
   type: 'EMAIL' | 'SMS' | 'PUSH';
-  status: 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED';
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
   priority: 'LOW' | 'NORMAL' | 'HIGH';
   patientName: string;
   interventionTitle: string;
@@ -64,27 +64,87 @@ interface ApiReminder {
 }
 
 // Fonction pour mapper les données de l'API vers l'interface Reminder
-const mapApiReminderToReminder = (apiReminder: ApiReminder): Reminder => {
-  const patientName = apiReminder.intervention?.person 
-    ? `${apiReminder.intervention.person.firstName} ${apiReminder.intervention.person.lastName}`
-    : 'Patient inconnu';
+const mapApiReminderToReminder = (apiReminder: any): Reminder => {
+  console.log('🔍 Structure complète du rappel API:', JSON.stringify(apiReminder, null, 2));
   
-  const interventionTitle = apiReminder.intervention?.title || 'Intervention inconnue';
+  // Gérer différents formats pour le nom du patient
+  let patientName = 'Patient inconnu';
+  
+  // Vérifier si l'intervention est incluse
+  if (apiReminder.intervention) {
+    console.log('✅ Intervention incluse:', apiReminder.intervention);
+    
+    // Vérifier si la personne est incluse dans l'intervention
+    if (apiReminder.intervention.person) {
+      const person = apiReminder.intervention.person;
+      console.log('✅ Person incluse dans intervention:', person);
+      
+      if (person.fullName) {
+        patientName = person.fullName;
+      } else if (person.firstName && person.lastName) {
+        patientName = `${person.firstName} ${person.lastName}`;
+      } else if (person.firstName) {
+        patientName = person.firstName;
+      } else if (person.lastName) {
+        patientName = person.lastName;
+      }
+    } else if (apiReminder.intervention.personId) {
+      // Si on a seulement l'ID, on ne peut pas récupérer le nom sans requête supplémentaire
+      console.log('⚠️ Seulement personId disponible:', apiReminder.intervention.personId);
+      patientName = `Patient ${apiReminder.intervention.personId}`;
+    }
+  } else if (apiReminder.interventionId) {
+    // Si l'intervention n'est pas incluse, on a seulement l'ID
+    console.log('⚠️ Intervention non incluse, seulement interventionId:', apiReminder.interventionId);
+    patientName = 'Patient inconnu (intervention non chargée)';
+  }
+  
+  // Gérer le titre de l'intervention
+  const interventionTitle = apiReminder.intervention?.title 
+    || apiReminder.intervention?.name 
+    || (apiReminder.interventionId ? `Intervention ${apiReminder.interventionId}` : 'Intervention inconnue');
+  
+  // Gérer le message/description
+  const description = apiReminder.message 
+    || apiReminder.description 
+    || `Rappel ${(apiReminder.type || 'UNKNOWN').toLowerCase()} pour ${interventionTitle}`;
+  
+  // Gérer la date programmée
+  const scheduledAt = apiReminder.plannedSendUtc 
+    || apiReminder.scheduledAt 
+    || apiReminder.plannedSendAt 
+    || apiReminder.createdAt 
+    || new Date().toISOString();
+  
+  // Gérer le type
+  const type = (apiReminder.type || 'EMAIL') as 'EMAIL' | 'SMS' | 'PUSH';
+  
+  // Gérer le statut
+  const status = (apiReminder.status || 'PENDING') as 'PENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
+  
+  // Gérer la date de création
+  const createdAt = apiReminder.createdAt || new Date().toISOString();
+  
+  // Gérer la date d'envoi
+  const sentAt = apiReminder.sentAt || undefined;
+  
+  // Créer le titre
+  const title = `${type} - ${patientName}`;
   
   return {
-    id: apiReminder.id,
-    title: `${apiReminder.type} - ${patientName}`,
-    description: apiReminder.message || `Rappel ${apiReminder.type.toLowerCase()} pour ${interventionTitle}`,
-    scheduledAt: apiReminder.plannedSendUtc,
-    type: apiReminder.type as 'EMAIL' | 'SMS' | 'PUSH',
-    status: apiReminder.status as 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED',
+    id: apiReminder.id || `reminder_${Date.now()}`,
+    title,
+    description,
+    scheduledAt,
+    type,
+    status,
     priority: 'NORMAL', // Pas de priorité dans l'API, on met NORMAL par défaut
     patientName,
     interventionTitle,
-    createdAt: apiReminder.createdAt,
-    sentAt: apiReminder.sentAt,
-    deliveryStatus: apiReminder.status === 'SENT' ? 'Delivered' : 
-                   apiReminder.status === 'FAILED' ? `Failed - ${apiReminder.lastError || 'Unknown error'}` : 
+    createdAt,
+    sentAt,
+    deliveryStatus: status === 'SENT' ? 'Delivered' : 
+                   status === 'FAILED' ? `Failed - ${apiReminder.lastError || 'Unknown error'}` : 
                    undefined
   };
 };
@@ -112,12 +172,33 @@ export function RemindersOverview() {
     () => apiClient.getReminders(),
     {
       onSuccess: (data) => {
-        const mappedReminders = data.map(mapApiReminderToReminder);
+        console.log('📥 Données rappels reçues de l\'API:', data);
+        console.log('📥 Type de données:', typeof data);
+        console.log('📥 Est un tableau?', Array.isArray(data));
+        
+        // Gérer les deux formats possibles : tableau direct ou objet avec propriété data
+        const remindersArray = Array.isArray(data) 
+          ? data 
+          : (data?.data || []);
+        
+        console.log('📋 Tableau de rappels:', remindersArray);
+        console.log('📋 Nombre de rappels:', remindersArray.length);
+        
+        if (remindersArray.length > 0) {
+          console.log('📋 Premier rappel (exemple):', remindersArray[0]);
+        }
+        
+        const mappedReminders = remindersArray.map((reminder: any, index: number) => {
+          console.log(`🔄 Mapping rappel ${index + 1}:`, reminder);
+          return mapApiReminderToReminder(reminder);
+        });
+        
+        console.log('✅ Rappels mappés:', mappedReminders);
         setReminders(mappedReminders);
         setLoading(false);
       },
       onError: (error) => {
-        console.error('Erreur lors du chargement des rappels:', error);
+        console.error('❌ Erreur lors du chargement des rappels:', error);
         toast.error('Erreur lors du chargement des rappels');
         setLoading(false);
       }
@@ -256,8 +337,8 @@ export function RemindersOverview() {
                     { value: 'ALL', label: 'Tous les statuts' },
                     { value: 'PENDING', label: 'En attente' },
                     { value: 'SENT', label: 'Envoyé' },
-                    { value: 'DELIVERED', label: 'Livré' },
                     { value: 'FAILED', label: 'Échec' },
+                    { value: 'CANCELLED', label: 'Annulé' },
                   ],
                 },
                 {

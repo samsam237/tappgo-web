@@ -1,13 +1,16 @@
 import React from 'react';
+import { clsx } from 'clsx';
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
+  hover?: boolean;
 }
 
-export function Card({ children, className = '' }: CardProps) {
+export function Card({ children, className = '', hover = true }: CardProps) {
+  const classes = clsx('card', hover && 'hover:shadow-medium', className);
   return (
-    <div className={`card ${className}`}>
+    <div className={classes}>
       {children}
     </div>
   );
@@ -20,7 +23,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return (
-    <div className={`card-header ${className}`}>
+    <div className={clsx('card-header', className)}>
       {children}
     </div>
   );
@@ -33,7 +36,7 @@ interface CardTitleProps {
 
 export function CardTitle({ children, className = '' }: CardTitleProps) {
   return (
-    <h3 className={`card-title ${className}`}>
+    <h3 className={clsx('card-title', className)}>
       {children}
     </h3>
   );
@@ -46,7 +49,7 @@ interface CardContentProps {
 
 export function CardContent({ children, className = '' }: CardContentProps) {
   return (
-    <div className={`card-body ${className}`}>
+    <div className={clsx('card-body', className)}>
       {children}
     </div>
   );
