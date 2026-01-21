@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { apiClient } from '@/lib/api';
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/modal';
@@ -13,6 +13,7 @@ import { DateTimePicker } from '@/components/ui/date-picker';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { toast } from 'react-hot-toast';
 import { CreateInterventionRequest } from '@/types';
+import { useFormDraft } from '@/hooks/use-form-draft';
 
 interface CreateInterventionModalProps {
   isOpen: boolean;
@@ -22,11 +23,16 @@ interface CreateInterventionModalProps {
 export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionModalProps) {
   const [formData, setFormData] = useState<Partial<CreateInterventionRequest>>({
     title: '',
+    interventionTypeId: '',
     description: '',
+    costType: 'FREE',
+    costAmount: undefined,
     scheduledAt: '',
     priority: 'NORMAL',
     location: '',
   });
+
+  useFormDraft('draft_create_intervention_v1', formData, setFormData, isOpen);
 
   const queryClient = useQueryClient();
 
@@ -45,6 +51,34 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
     () => apiClient.getProfile(),
     {
       enabled: isOpen,
+    }
+  );
+
+  // Récupérer la nomenclature des types d'intervention (globale + médecin)
+  const doctorId = profile?.doctor?.id;
+  const { data: interventionTypes, isLoading: loadingTypes } = useQuery(
+    ['intervention-types', doctorId],
+    () => apiClient.getInterventionTypes({ doctorId }),
+    {
+      enabled: isOpen,
+    }
+  );
+
+  const createTypeMutation = useMutation(
+    (name: string) => apiClient.createInterventionType({ name, doctorId }),
+    {
+      onSuccess: (created: any) => {
+        toast.success('Type d’intervention ajouté');
+        queryClient.invalidateQueries(['intervention-types', doctorId]);
+        setFormData(prev => ({
+          ...prev,
+          interventionTypeId: created.id,
+          title: created.name,
+        }));
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de la création du type');
+      },
     }
   );
 
@@ -68,7 +102,10 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
   const resetForm = () => {
     setFormData({
       title: '',
+      interventionTypeId: '',
       description: '',
+      costType: 'FREE',
+      costAmount: undefined,
       scheduledAt: '',
       priority: 'NORMAL',
       location: '',
@@ -88,11 +125,19 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
       return;
     }
 
+    if (formData.costType === 'PAID' && (!formData.costAmount || formData.costAmount <= 0)) {
+      toast.error('Veuillez renseigner un montant > 0 pour une intervention payante');
+      return;
+    }
+
     createInterventionMutation.mutate({
       personId: formData.personId,
       doctorId: profile.doctor.id,
       title: formData.title,
+      interventionTypeId: formData.interventionTypeId || undefined,
       description: formData.description,
+      costType: formData.costType as any,
+      costAmount: formData.costType === 'PAID' ? Number(formData.costAmount) : undefined,
       scheduledAt: formData.scheduledAt,
       priority: formData.priority as 'NORMAL' | 'URGENT',
       location: formData.location,
@@ -101,8 +146,18 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
 
   const patientOptions = patients?.data?.map((patient: any) => ({
     value: patient.id,
-    label: patient.fullName,
+    label: patient.tappNumber ? `${patient.fullName} (TAPP: ${patient.tappNumber})` : patient.fullName,
   })) || [];
+
+  const typeOptions = (interventionTypes || []).map((t: any) => ({
+    value: t.id,
+    label: t.createdByDoctorId ? `${t.name} (perso)` : t.name,
+  }));
+
+  const selectedTypeLabel = useMemo(() => {
+    const found = (interventionTypes || []).find((t: any) => t.id === formData.interventionTypeId);
+    return found?.name || '';
+  }, [interventionTypes, formData.interventionTypeId]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg" title="Nouvelle intervention">
@@ -128,6 +183,57 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
               )}
             </div>
 
+            {/* Type (nomenclature) */}
+            <div>
+              <Label htmlFor="interventionType">Type d’intervention</Label>
+              <Select
+                id="interventionType"
+                value={formData.interventionTypeId}
+                onValueChange={(value) => {
+                  const found = (interventionTypes || []).find((t: any) => t.id === value);
+                  setFormData(prev => ({
+                    ...prev,
+                    interventionTypeId: value,
+                    title: found?.name || prev.title,
+                  }));
+                }}
+                placeholder={loadingTypes ? 'Chargement...' : 'Choisir un type'}
+                options={typeOptions}
+                disabled={loadingTypes}
+              />
+              <div className="mt-2 flex gap-2">
+                <Input
+                  id="newType"
+                  placeholder="Ajouter un nouveau type (Dr)"
+                  defaultValue=""
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const value = (e.currentTarget as any).value?.trim();
+                      if (value) createTypeMutation.mutate(value);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const el = document.getElementById('newType') as HTMLInputElement | null;
+                    const value = el?.value?.trim();
+                    if (value) createTypeMutation.mutate(value);
+                  }}
+                  disabled={createTypeMutation.isLoading}
+                >
+                  Ajouter
+                </Button>
+              </div>
+              {selectedTypeLabel && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Le titre sera pré-rempli à partir du type sélectionné (modifiable).
+                </p>
+              )}
+            </div>
+
             {/* Titre */}
             <div>
               <Label htmlFor="title" required>Titre de l'intervention</Label>
@@ -138,6 +244,33 @@ export function CreateInterventionModal({ isOpen, onClose }: CreateInterventionM
                 placeholder="Ex: Visite à domicile - Suivi diabète"
                 required
               />
+            </div>
+
+            {/* Coût */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="costType">Coût</Label>
+                <Select
+                  id="costType"
+                  value={formData.costType}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, costType: value as any }))}
+                  options={[
+                    { value: 'FREE', label: 'Gratuite' },
+                    { value: 'PAID', label: 'Payante' },
+                  ]}
+                />
+              </div>
+              <div>
+                <Label htmlFor="costAmount">Montant (si payante)</Label>
+                <Input
+                  id="costAmount"
+                  type="number"
+                  value={formData.costAmount as any}
+                  onChange={(e) => setFormData(prev => ({ ...prev, costAmount: e.target.value ? Number(e.target.value) : undefined }))}
+                  placeholder="Ex: 5000"
+                  disabled={formData.costType !== 'PAID'}
+                />
+              </div>
             </div>
 
             {/* Description */}

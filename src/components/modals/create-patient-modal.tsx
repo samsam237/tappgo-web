@@ -12,6 +12,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { toast } from 'react-hot-toast';
 import { CreatePersonRequest } from '@/types';
+import { useFormDraft } from '@/hooks/use-form-draft';
 
 interface CreatePatientModalProps {
   isOpen: boolean;
@@ -21,11 +22,14 @@ interface CreatePatientModalProps {
 export function CreatePatientModal({ isOpen, onClose }: CreatePatientModalProps) {
   const [formData, setFormData] = useState<Partial<CreatePersonRequest>>({
     fullName: '',
+    tappNumber: '',
     birthdate: '',
     phone: '',
     email: '',
     address: '',
   });
+
+  useFormDraft('draft_create_patient_v1', formData, setFormData, isOpen);
 
   const queryClient = useQueryClient();
 
@@ -56,6 +60,7 @@ export function CreatePatientModal({ isOpen, onClose }: CreatePatientModalProps)
   const resetForm = () => {
     setFormData({
       fullName: '',
+      tappNumber: '',
       birthdate: '',
       phone: '',
       email: '',
@@ -106,6 +111,9 @@ export function CreatePatientModal({ isOpen, onClose }: CreatePatientModalProps)
     }
 
     // Ajouter les autres champs optionnels seulement s'ils ne sont pas vides
+    if (formData.tappNumber && formData.tappNumber.trim() !== '') {
+      cleanedData.tappNumber = formData.tappNumber.trim();
+    }
     if (formData.phone && formData.phone.trim() !== '') {
       cleanedData.phone = formData.phone.trim();
     }
@@ -138,6 +146,20 @@ export function CreatePatientModal({ isOpen, onClose }: CreatePatientModalProps)
                 placeholder="Ex: Marie Nguema"
                 required
               />
+            </div>
+
+            {/* Numéro TAPP */}
+            <div>
+              <Label htmlFor="tappNumber">Numéro TAPP</Label>
+              <Input
+                id="tappNumber"
+                value={formData.tappNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, tappNumber: e.target.value }))}
+                placeholder="Ex: TAPP-000123"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Identifiant utilisé pour l’agent TAPP et le patient (si applicable).
+              </p>
             </div>
 
             {/* Date de naissance */}

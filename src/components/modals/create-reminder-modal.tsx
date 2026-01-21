@@ -12,6 +12,7 @@ import { Select } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { toast } from 'react-hot-toast';
+import { useFormDraft } from '@/hooks/use-form-draft';
 
 interface CreateReminderModalProps {
   isOpen: boolean;
@@ -48,6 +49,8 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
       phone: ''
     }
   });
+
+  useFormDraft('draft_create_reminder_v1', formData, setFormData, isOpen);
 
   const queryClient = useQueryClient();
 
@@ -206,7 +209,7 @@ export function CreateReminderModal({ isOpen, onClose }: CreateReminderModalProp
   
   const patientOptions = patientsArray.map((patient: any) => ({
     value: patient.id,
-    label: patient.fullName,
+    label: patient.tappNumber ? `${patient.fullName} (TAPP: ${patient.tappNumber})` : patient.fullName,
   }));
 
   // Gérer les deux formats possibles : tableau direct ou objet avec propriété data

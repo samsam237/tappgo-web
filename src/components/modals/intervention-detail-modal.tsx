@@ -85,12 +85,10 @@ export function InterventionDetailModal({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PLANNED':
-        return <Badge variant="default" className="bg-blue-500 hover:bg-blue-500">Planifiée</Badge>;
-      case 'IN_PROGRESS':
-        return <Badge variant="default" className="bg-purple-500 hover:bg-purple-500">En cours</Badge>;
-      case 'COMPLETED':
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-500">Terminée</Badge>;
-      case 'CANCELLED':
+        return <Badge variant="default" className="bg-blue-500 hover:bg-blue-500">Prévue</Badge>;
+      case 'DONE':
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-500">Effectuée</Badge>;
+      case 'CANCELED':
         return <Badge variant="destructive">Annulée</Badge>;
       default:
         return <Badge variant="secondary">Inconnu</Badge>;
@@ -209,6 +207,26 @@ export function InterventionDetailModal({
           {/* Informations principales */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
+              {(intervention.interventionType?.name || intervention.interventionTypeId) && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Type</h4>
+                  <p className="text-sm text-gray-600">
+                    {intervention.interventionType?.name || '—'}
+                  </p>
+                </div>
+              )}
+
+              {(intervention.costType || intervention.costAmount) && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Coût estimatif</h4>
+                  <p className="text-sm text-gray-600">
+                    {intervention.costType === 'PAID'
+                      ? `${intervention.costAmount || 0} XAF (payante)`
+                      : 'Gratuite'}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <h4 className="text-sm font-medium text-gray-900 mb-2">Description</h4>
                 <p className="text-sm text-gray-600">
@@ -292,6 +310,25 @@ export function InterventionDetailModal({
             </div>
           )}
 
+          {/* Rapport d'intervention */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Rapport d’intervention</h4>
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">
+                {(intervention as any).reportText || 'Aucun rapport'}
+              </p>
+              {Array.isArray((intervention as any).reportAttachments) && (intervention as any).reportAttachments.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {(intervention as any).reportAttachments.map((url: string) => (
+                    <a key={url} href={url} target="_blank" rel="noreferrer" className="text-sm text-primary-600 hover:underline">
+                      {url}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Notes et observations */}
           <div>
             <h4 className="text-sm font-medium text-gray-900 mb-2">Notes</h4>
@@ -307,7 +344,7 @@ export function InterventionDetailModal({
       <ModalFooter>
         <div className="flex justify-between w-full">
           <div>
-            {intervention.status !== 'CANCELLED' && (
+            {intervention.status !== 'CANCELED' && (
               <Button
                 variant="destructive"
                 onClick={handleDelete}
@@ -328,7 +365,7 @@ export function InterventionDetailModal({
             <Button variant="secondary" onClick={onClose}>
               Fermer
             </Button>
-            {intervention.status !== 'COMPLETED' && intervention.status !== 'CANCELLED' && (
+            {intervention.status !== 'DONE' && intervention.status !== 'CANCELED' && (
               <Button onClick={() => onEdit?.(intervention.id)}>
                 Modifier
               </Button>

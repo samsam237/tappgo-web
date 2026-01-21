@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { toast } from 'react-hot-toast';
+import { dequeueOffline, enqueueOffline, getOfflineQueue } from './offline-queue';
 
 export class ApiClient {
   private client: AxiosInstance;
@@ -62,6 +63,17 @@ export class ApiClient {
         return response;
       },
       (error) => {
+        // Erreurs réseau/offline
+        const isNetworkError =
+          !error.response &&
+          (error.code === 'ERR_NETWORK' ||
+            error.message?.toLowerCase().includes('network') ||
+            error.message?.toLowerCase().includes('failed to fetch'));
+
+        if (isNetworkError) {
+          toast.error('Problème réseau : vérifiez votre connexion. Vos saisies peuvent être sauvegardées localement.');
+        }
+
         // Détection des erreurs de certificat SSL/TLS
         const isCertificateError = 
           error.code === 'ERR_CERT_AUTHORITY_INVALID' ||
@@ -211,17 +223,60 @@ export class ApiClient {
   }
 
   async createIntervention(data: any) {
-    const response = await this.client.post('/interventions', data);
-    return response.data;
+    try {
+      const response = await this.client.post('/interventions', data);
+      return response.data;
+    } catch (e: any) {
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        enqueueOffline({ method: 'post', url: '/interventions', data });
+        toast.success('Hors‑ligne : intervention sauvegardée localement (à synchroniser).');
+        return { offline: true };
+      }
+      throw e;
+    }
   }
 
   async updateIntervention(id: string, data: any) {
-    const response = await this.client.patch(`/interventions/${id}`, data);
-    return response.data;
+    try {
+      const response = await this.client.patch(`/interventions/${id}`, data);
+      return response.data;
+    } catch (e: any) {
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        enqueueOffline({ method: 'patch', url: `/interventions/${id}`, data });
+        toast.success('Hors‑ligne : mise à jour sauvegardée localement (à synchroniser).');
+        return { offline: true };
+      }
+      throw e;
+    }
   }
 
   async deleteIntervention(id: string) {
     const response = await this.client.delete(`/interventions/${id}`);
+    return response.data;
+  }
+
+  // Types d'intervention (nomenclature)
+  async getInterventionTypes(params?: { search?: string; doctorId?: string }) {
+    const response = await this.client.get('/intervention-types', { params });
+    return response.data;
+  }
+
+  async createInterventionType(data: { name: string; doctorId?: string }) {
+    const response = await this.client.post('/intervention-types', data);
+    return response.data;
+  }
+
+  // Upload pièces jointes rapport intervention
+  async uploadInterventionReportAttachments(interventionId: string, files: File[]) {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    const response = await this.client.post(
+      `/interventions/${interventionId}/report-attachments`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      },
+    );
     return response.data;
   }
 
@@ -237,8 +292,17 @@ export class ApiClient {
   }
 
   async createPerson(data: any) {
-    const response = await this.client.post('/people', data);
-    return response.data;
+    try {
+      const response = await this.client.post('/people', data);
+      return response.data;
+    } catch (e: any) {
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        enqueueOffline({ method: 'post', url: '/people', data });
+        toast.success('Hors‑ligne : patient sauvegardé localement (à synchroniser).');
+        return { offline: true };
+      }
+      throw e;
+    }
   }
 
   async updatePerson(id: string, data: any) {
@@ -280,8 +344,42 @@ export class ApiClient {
   }
 
   async createConsultation(data: any) {
-    const response = await this.client.post('/consultations', data);
-    return response.data;
+    try {
+      const response = await this.client.post('/consultations', data);
+      return response.data;
+    } catch (e: any) {
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        enqueueOffline({ method: 'post', url: '/consultations', data });
+        toast.success('Hors‑ligne : consultation sauvegardée localement (à synchroniser).');
+        return { offline: true };
+      }
+      throw e;
+    }
+  }
+
+  // Synchronisation de la file offline (appelable au démarrage et au retour réseau)
+  async syncOfflineQueue() {
+    const items = getOfflineQueue();
+    if (!items.length) return { processed: 0 };
+    if (typeof window !== 'undefined' && !navigator.onLine) return { processed: 0 };
+
+    let processed = 0;
+    for (const item of items) {
+      try {
+        if (item.method === 'post') await this.client.post(item.url, item.data);
+        if (item.method === 'patch') await this.client.patch(item.url, item.data);
+        if (item.method === 'delete') await this.client.delete(item.url);
+        dequeueOffline(item.id);
+        processed++;
+      } catch {
+        // Stop si une requête échoue (ordre important)
+        break;
+      }
+    }
+    if (processed > 0) {
+      toast.success(`Synchronisation hors‑ligne : ${processed} action(s) envoyée(s).`);
+    }
+    return { processed };
   }
 
   async updateConsultation(id: string, data: any) {

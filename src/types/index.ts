@@ -30,11 +30,21 @@ export interface Person {
   phone?: string;
   email?: string;
   address?: string;
+  tappNumber?: string;
   createdAt: string;
   updatedAt: string;
   organizations?: PersonOrganization[];
   consultations?: Consultation[];
   interventions?: Intervention[];
+}
+
+export interface InterventionType {
+  id: string;
+  name: string;
+  createdByDoctorId?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PersonOrganization {
@@ -66,8 +76,14 @@ export interface Intervention {
   id: string;
   personId: string;
   doctorId: string;
+  interventionTypeId?: string | null;
+  interventionType?: InterventionType | null;
   title: string;
   description?: string;
+  costType?: 'FREE' | 'PAID' | null;
+  costAmount?: number | null;
+  reportText?: string | null;
+  reportAttachments?: string[] | string | null;
   scheduledAtUtc: string;
   priority: 'NORMAL' | 'URGENT' | 'LOW';
   status: 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELED';
@@ -147,7 +163,11 @@ export interface CreateInterventionRequest {
   personId: string;
   doctorId: string;
   title: string;
+  interventionTypeId?: string;
   description?: string;
+  costType?: 'FREE' | 'PAID';
+  costAmount?: number;
+  reportText?: string;
   scheduledAt: string;
   priority?: 'NORMAL' | 'URGENT' | 'LOW';
   location?: string;
@@ -164,6 +184,7 @@ export interface CreatePersonRequest {
   phone?: string;
   email?: string;
   address?: string;
+  tappNumber?: string;
 }
 
 export interface CreateConsultationRequest {

@@ -2,8 +2,9 @@
 
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ReactQueryDevtools } from 'react-query/devtools';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthProvider } from '@/components/auth/auth-provider';
+import { apiClient } from '@/lib/api';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -26,6 +27,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       })
   );
+
+  // Synchronisation basique des actions offline quand la connexion revient
+  useEffect(() => {
+    const sync = () => {
+      apiClient.syncOfflineQueue().catch(() => undefined);
+    };
+    // tenter au démarrage
+    sync();
+    // et au retour online
+    window.addEventListener('online', sync);
+    return () => window.removeEventListener('online', sync);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

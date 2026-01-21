@@ -14,30 +14,41 @@ interface FilterOption {
   placeholder?: string;
 }
 
-interface SearchFilterProps {
-  searchValue: string;
-  onSearchChange: (value: string) => void;
-  filters: FilterOption[];
-  filterValues: Record<string, string>;
-  onFilterChange: (key: string, value: string) => void;
-  onClearFilters: () => void;
-  placeholder?: string;
-  className?: string;
-}
+type SearchFilterProps =
+  | {
+      // API complète (avec filtres)
+      searchValue: string;
+      onSearchChange: (value: string) => void;
+      filters: FilterOption[];
+      filterValues: Record<string, string>;
+      onFilterChange: (key: string, value: string) => void;
+      onClearFilters: () => void;
+      placeholder?: string;
+      className?: string;
+    }
+  | {
+      // API simple (recherche seule) - compat avec certains écrans
+      value: string;
+      onChange: (value: string) => void;
+      placeholder?: string;
+      className?: string;
+    };
 
-export function SearchFilter({
-  searchValue,
-  onSearchChange,
-  filters,
-  filterValues,
-  onFilterChange,
-  onClearFilters,
-  placeholder = 'Rechercher...',
-  className = '',
-}: SearchFilterProps) {
+export function SearchFilter(props: SearchFilterProps) {
   const [showFilters, setShowFilters] = useState(false);
 
-  const hasActiveFilters = Object.values(filterValues).some(value => value !== '');
+  const placeholder = 'placeholder' in props && props.placeholder ? props.placeholder : 'Rechercher...';
+  const className = 'className' in props && props.className ? props.className : '';
+
+  const searchValue = 'searchValue' in props ? props.searchValue : props.value;
+  const onSearchChange = 'onSearchChange' in props ? props.onSearchChange : props.onChange;
+
+  const filters = 'filters' in props ? props.filters : [];
+  const filterValues = 'filterValues' in props ? props.filterValues : {};
+  const onFilterChange = 'onFilterChange' in props ? props.onFilterChange : (() => undefined);
+  const onClearFilters = 'onClearFilters' in props ? props.onClearFilters : (() => undefined);
+
+  const hasActiveFilters = Object.values(filterValues).some((value) => value !== '');
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -68,7 +79,7 @@ export function SearchFilter({
       </div>
 
       {/* Filtres */}
-      {showFilters && (
+      {showFilters && filters.length > 0 && (
         <div className="bg-gray-50 p-4 rounded-lg space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-gray-900">Filtres</h4>

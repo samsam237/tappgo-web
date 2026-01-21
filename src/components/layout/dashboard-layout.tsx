@@ -13,7 +13,8 @@ import {
   PlusIcon,
   Bars3Icon,
   XMarkIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { Logo } from '@/components/ui/logo';
@@ -22,6 +23,7 @@ import { CreateInterventionModal } from '@/components/modals/create-intervention
 const navigation = [
   { name: 'Tableau de bord', href: '/dashboard', icon: HomeIcon },
   { name: 'Interventions', href: '/interventions', icon: CalendarIcon },
+  { name: 'Consultations', href: '/consultations', icon: DocumentTextIcon },
   { name: 'Patients', href: '/patients', icon: UserGroupIcon },
   { name: 'Rappels', href: '/reminders', icon: BellIcon },
   { name: 'Statistiques', href: '/stats', icon: ChartBarIcon },

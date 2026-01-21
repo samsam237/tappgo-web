@@ -28,14 +28,19 @@ export function EditInterventionModal({ isOpen, onClose, interventionId }: EditI
     priority: 'NORMAL',
     location: '',
     status: 'PLANNED',
+    costType: 'FREE',
+    costAmount: undefined,
+    reportText: '',
   });
+
+  const [newFiles, setNewFiles] = useState<File[]>([]);
 
   const queryClient = useQueryClient();
 
   // Récupérer les détails de l'intervention
   const { data: intervention, isLoading } = useQuery(
     ['intervention', interventionId],
-    () => apiClient.getInterventions({ id: interventionId }),
+    () => apiClient.getIntervention(interventionId as string),
     {
       enabled: isOpen && !!interventionId,
     }
@@ -54,10 +59,21 @@ export function EditInterventionModal({ isOpen, onClose, interventionId }: EditI
   const updateInterventionMutation = useMutation(
     (data: Partial<Intervention>) => apiClient.updateIntervention(interventionId!, data),
     {
-      onSuccess: () => {
+      onSuccess: async () => {
+        // Upload des pièces jointes si présentes
+        if (interventionId && newFiles.length > 0) {
+          try {
+            await apiClient.uploadInterventionReportAttachments(interventionId, newFiles);
+            setNewFiles([]);
+          } catch (e) {
+            // Ne bloque pas la mise à jour principale
+            toast.error('Mise à jour OK, mais upload des pièces jointes en échec');
+          }
+        }
         toast.success('Intervention mise à jour avec succès');
         queryClient.invalidateQueries('interventions');
         queryClient.invalidateQueries('upcoming-interventions');
+        queryClient.invalidateQueries(['intervention', interventionId]);
         onClose();
       },
       onError: (error: any) => {
@@ -76,6 +92,9 @@ export function EditInterventionModal({ isOpen, onClose, interventionId }: EditI
         priority: intervention.priority,
         location: intervention.location,
         status: intervention.status,
+        costType: (intervention as any).costType || 'FREE',
+        costAmount: (intervention as any).costAmount || undefined,
+        reportText: (intervention as any).reportText || '',
       });
     }
   }, [intervention]);
@@ -88,7 +107,15 @@ export function EditInterventionModal({ isOpen, onClose, interventionId }: EditI
       return;
     }
 
-    updateInterventionMutation.mutate(formData);
+    if ((formData as any).costType === 'PAID' && (!(formData as any).costAmount || Number((formData as any).costAmount) <= 0)) {
+      toast.error('Veuillez renseigner un montant > 0 pour une intervention payante');
+      return;
+    }
+
+    updateInterventionMutation.mutate({
+      ...formData,
+      costAmount: (formData as any).costType === 'PAID' ? Number((formData as any).costAmount) : null,
+    } as any);
   };
 
   const patientOptions = patients?.data?.map((patient: any) => ({
@@ -171,12 +198,68 @@ export function EditInterventionModal({ isOpen, onClose, interventionId }: EditI
                 value={formData.status}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELED' }))}
                 options={[
-                  { value: 'PLANNED', label: 'Planifiée' },
-                  { value: 'IN_PROGRESS', label: 'En cours' },
-                  { value: 'DONE', label: 'Terminée' },
+                  { value: 'PLANNED', label: 'Prévue' },
+                  { value: 'DONE', label: 'Effectuée' },
                   { value: 'CANCELED', label: 'Annulée' },
                 ]}
               />
+            </div>
+
+            {/* Coût */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="costType">Coût</Label>
+                <Select
+                  id="costType"
+                  value={(formData as any).costType}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, costType: value as any }))}
+                  options={[
+                    { value: 'FREE', label: 'Gratuite' },
+                    { value: 'PAID', label: 'Payante' },
+                  ]}
+                />
+              </div>
+              <div>
+                <Label htmlFor="costAmount">Montant (si payante)</Label>
+                <Input
+                  id="costAmount"
+                  type="number"
+                  value={(formData as any).costAmount as any}
+                  onChange={(e) => setFormData(prev => ({ ...prev, costAmount: e.target.value ? Number(e.target.value) : undefined }))}
+                  placeholder="Ex: 5000"
+                  disabled={(formData as any).costType !== 'PAID'}
+                />
+              </div>
+            </div>
+
+            {/* Rapport */}
+            <div>
+              <Label htmlFor="reportText">Rapport d’intervention</Label>
+              <Textarea
+                id="reportText"
+                value={((formData as any).reportText as any) || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, reportText: e.target.value }))}
+                placeholder="Compte rendu..."
+                rows={4}
+              />
+            </div>
+
+            {/* Pièces jointes */}
+            <div>
+              <Label htmlFor="reportFiles">Pièces jointes (photo ordonnance / rapport)</Label>
+              <Input
+                id="reportFiles"
+                type="file"
+                multiple
+                accept="image/*,.pdf"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setNewFiles(files);
+                }}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Les fichiers seront uploadés après la mise à jour.
+              </p>
             </div>
 
             {/* Lieu */}
