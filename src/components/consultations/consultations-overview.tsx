@@ -39,6 +39,8 @@ interface ApiConsultation {
     phone?: string;
     email?: string;
     tappNumber?: string;
+    createdAt?: string;
+    updatedAt?: string;
   };
   doctor?: {
     id: string;
@@ -60,8 +62,28 @@ const mapApiConsultationToConsultation = (api: ApiConsultation): Consultation =>
     status: api.status,
     createdAt: api.createdAt,
     updatedAt: api.updatedAt,
-    person: api.person,
-    doctor: api.doctor,
+    person: api.person
+      ? {
+          id: api.person.id,
+          fullName: api.person.fullName,
+          phone: api.person.phone,
+          email: api.person.email,
+          tappNumber: api.person.tappNumber,
+          // fallback si l'API ne remonte pas ces champs dans l'objet person
+          createdAt: api.person.createdAt ?? api.createdAt,
+          updatedAt: api.person.updatedAt ?? api.updatedAt,
+        }
+      : undefined,
+    doctor: api.doctor
+      ? {
+          id: api.doctor.id,
+          // fallback minimal pour satisfaire le type `Doctor`
+          userId: api.doctor.id,
+          isActive: true,
+          speciality: api.doctor.speciality,
+          user: api.doctor.user as any,
+        }
+      : undefined,
   };
 };
 
